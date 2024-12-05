@@ -1,14 +1,12 @@
 import NextAuth from "next-auth/next";
-// eslint-disable-next-line no-unused-vars
-import type { DefaultSession } from "next-auth/next";
-
-// eslint-disable-next-line no-unused-vars
+import type { DefaultSession } from "next-auth";
 import type { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import prismadb from "@/providers/prismaclient";
 import { comparePassword } from "@/lib/backend/handlePasswords";
-import { NextApiRequest, NextApiResponse } from "next";
+import type { NextApiRequest, NextApiResponse } from "next";
 
+// Extend NextAuth module types
 declare module "next-auth" {
   interface Session extends DefaultSession {
     user: {
@@ -32,11 +30,11 @@ export const authOptions: NextAuthOptions = {
       credentials: {
         email: { label: "Email", type: "email", placeholder: "johndoe@example.com" },
         password: { label: "Password", type: "password" },
-        role: { label: "Role", type: "text" }, // Add this line
+        role: { label: "Role", type: "text" },
       },
       async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) {
-          return null;
+        if (!credentials?.email || !credentials?.password || !credentials?.role) {
+          throw new Error("Missing credentials");
         }
 
         const user = await prismadb.user.findUnique({
@@ -44,29 +42,25 @@ export const authOptions: NextAuthOptions = {
         });
 
         if (!user) {
-          return null;
+          throw new Error("No user found with the provided email");
         }
 
-        try {
-          const isValid = await comparePassword(credentials.password, user.password);
-          if (isValid) {
-            // Check if the user's role matches the requested role
-            if (credentials.role && user.role !== credentials.role) {
-              throw new Error("Invalid role for this user");
-            }
-            return {
-              id: user.id.toString(),
-              name: user.name || "",
-              email: user.email,
-              role: user.role as "ADMIN" | "ORGANIZER" | "ATTENDEE",
-            };
-          }
-        } catch (error) {
-          console.error("Error comparing passwords:", error);
-          throw new Error(error as string);
+        const isValid = await comparePassword(credentials.password, user.password);
+
+        if (!isValid) {
+          throw new Error("Invalid password");
         }
 
-        return null;
+        if (user.role !== credentials.role) {
+          throw new Error("Invalid role for this user");
+        }
+
+        return {
+          id: user.id.toString(),
+          name: user.name || "",
+          email: user.email,
+          role: user.role as "ADMIN" | "ORGANIZER" | "ATTENDEE",
+        };
       },
     }),
   ],
@@ -97,6 +91,13 @@ export const authOptions: NextAuthOptions = {
   },
 };
 
-const handler = (req: NextApiRequest, res: NextApiResponse) => NextAuth(req, res, authOptions);
+const handler = async (req: NextApiRequest, res: NextApiResponse) => {
+  try {
+    return await NextAuth(req, res, authOptions);
+  } catch (error) {
+    console.error("Authentication error:", error);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+};
 
 export default handler;

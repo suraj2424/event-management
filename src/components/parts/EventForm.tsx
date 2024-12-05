@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { useForm } from "react-hook-form";
+import { Session } from "next-auth";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useSession } from "next-auth/react";
@@ -53,10 +54,27 @@ const eventSchema = z.object({
   ),
 });
 
+enum UserRole {
+  ADMIN = "ADMIN",
+  ORGANIZER = "ORGANIZER",
+  ATTENDEE = "ATTENDEE"
+}
+
+interface CustomSession extends Session {
+  user: {
+    id: string;
+    name?: string | null;
+    email?: string | null;
+    image?: string | null;
+    role?: UserRole | null;
+  };
+  status: "authenticated" | "loading" | "unauthenticated";
+}
+
 type EventFormValues = z.infer<typeof eventSchema>;
 
 export function EventForm() {
-  const { data: session, status } = useSession();
+  const { data: session, status } = useSession() as { data: CustomSession | null; status: "authenticated" | "loading" | "unauthenticated" };
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -126,7 +144,7 @@ export function EventForm() {
     );
   }
 
-  if (session.user.role !== "ORGANIZER") {
+  if (session.user && session.user.role !== "ORGANIZER") {
     return (
       <Card className="w-full max-w-md mx-auto">
         <CardHeader>
@@ -160,6 +178,10 @@ export function EventForm() {
       setError(null);
 
       // Prepare payload
+      if (!session.user) {
+        throw new Error("User session not found");
+      }
+
       const payload = {
         ...data,
         organizerId: session.user.id,
