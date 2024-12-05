@@ -1,5 +1,3 @@
-import NextAuth from "next-auth";
-
 // Extending the default Session type
 declare module "next-auth" {
   interface Session {

@@ -1,6 +1,9 @@
-import NextAuth from "next-auth";
-import { DefaultSession } from "next-auth";
-import { NextAuthOptions } from "next-auth";
+import NextAuth from "next-auth/next";
+// eslint-disable-next-line no-unused-vars
+import type { DefaultSession } from "next-auth/next";
+
+// eslint-disable-next-line no-unused-vars
+import type { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import prismadb from "@/providers/prismaclient";
 import { comparePassword } from "@/lib/backend/handlePasswords";
