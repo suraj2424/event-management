@@ -51,7 +51,7 @@ export default function ModernSignInPage() {
         redirect: false,
         email: values.email,
         password: values.password,
-        role: "ATTENDEE",
+        role: "ORGANIZER",
       });
 
       if (result?.error) {
