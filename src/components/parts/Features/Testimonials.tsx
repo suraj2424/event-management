@@ -29,7 +29,7 @@ const Testimonials = forwardRef<HTMLDivElement>((props, ref) => {
       <div className="max-w-6xl mx-auto">
         <h2 
           className="text-4xl md:text-5xl font-bold text-center mb-12 
-          text-white tracking-tight leading-tight 
+          tracking-wide leading-tight 
           hover:text-cyan-400 transition-colors duration-300"
         >
           What Our Users Are Saying
@@ -39,35 +39,36 @@ const Testimonials = forwardRef<HTMLDivElement>((props, ref) => {
           {testimonials.map((testimonial, index) => (
             <div
               key={index}
-              className="group p-6 rounded-2xl 
-              bg-zinc-900/50 backdrop-blur-lg 
-              border border-zinc-800 
-              hover:border-cyan-400 
+              className="group p-6 rounded-sm 
+              bg-white backdrop-blur-lg 
+              border border-zinc-200 
+              hover:border-cyan-400
+              hover:bg-stone-50 
               transition-all duration-500 
-              transform hover:-translate-y-2 hover:shadow-2xl"
+              transform hover:-translate-y-2 hover:shadow-md ease-in-out"
             >
               <Star 
                 className="w-8 h-8 text-yellow-400 mb-4 
                 group-hover:rotate-12 transition-transform duration-300"
               />
               <p 
-                className="mb-4 text-sm text-slate-400 
-                group-hover:text-white 
-                transition-colors duration-300"
+                className="mb-4 text-sm text-slate-600 
+                group-hover:text-black 
+                transition-colors duration-300 ease-in-out"
               >
                 {testimonial.quote}
               </p>
               <div 
-                className="font-bold text-white 
+                className="font-bold 
                 group-hover:text-cyan-400 
-                transition-colors duration-300"
+                transition-colors duration-300 ease-in-out tracking-wide"
               >
                 {testimonial.name}
               </div>
               <div 
-                className="text-sm text-zinc-500 
-                group-hover:text-slate-300 
-                transition-colors duration-300"
+                className="text-sm text-zinc-700 
+                group-hover:text-slate-400 
+                transition-colors duration-300 ease-in-out"
               >
                 {testimonial.role}
               </div>

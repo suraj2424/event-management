@@ -51,6 +51,7 @@ export default function ModernSignInPage() {
         redirect: false,
         email: values.email,
         password: values.password,
+        role: "ATTENDEE",
       });
 
       if (result?.error) {
@@ -196,7 +197,7 @@ export default function ModernSignInPage() {
           animate={{ opacity: 1 }}
           transition={{ delay: 0.6 }}
         >
-          Don't have an account?{" "}
+          Don&apos;t have an account?{" "}
           <Link 
             href="/signup" 
             className="font-medium text-blue-600 hover:text-blue-500 transition-colors duration-300"

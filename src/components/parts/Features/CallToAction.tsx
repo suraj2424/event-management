@@ -11,14 +11,14 @@ const CallToAction = () => {
       <div className="max-w-2xl mx-auto">
         <h2 
           className="text-3xl md:text-4xl font-bold mb-4 
-          text-white hover:text-cyan-400 
-          transition-colors duration-300"
+          hover:text-cyan-400 
+          transition-colors duration-300 ease-in-out"
         >
           Ready to Elevate Your Event Experience?
         </h2>
         <p 
-          className="mb-8 text-base text-slate-400 
-          hover:text-white 
+          className="mb-8 text-base text-slate-500 
+          hover:text-black 
           transition-colors duration-300"
         >
           Whether you're an organizer looking for efficient tools or an attendee eager to explore exciting activities, EVENZIA is here for you.

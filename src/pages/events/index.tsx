@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Search, ChevronLeft, ChevronRight, User, LogOut, Settings, Menu } from 'lucide-react';
+import Link from 'next/link';
 
 interface Event {
   id: number;
@@ -113,6 +114,15 @@ const EventsPage: React.FC = () => {
 
   return (
     <div className="max-w-[1400px] mx-auto mt-4 sm:mt-8 px-4">
+      <div className='mb-5'>
+        <Link 
+          href="/" 
+          className="inline-flex items-center text-sm font-medium text-primary underline-offset-4 hover:underline"
+        >
+          <ChevronLeft className="mr-2 h-4 w-4" />
+          Back to homepage
+        </Link>
+      </div>
       {/* Top Bar with Search and User Profile */}
       <div className="flex flex-col sm:flex-row justify-between items-center mb-6 space-y-4 sm:space-y-0">
         <div className="w-full sm:w-1/3">
@@ -229,7 +239,7 @@ const EventsPage: React.FC = () => {
 
         {/* Pagination */}
         {!loading && !error && filteredEvents.length > 0 && (
-          <div className="flex flex-col sm:flex-row justify-between items-center mt-16 space-y-4 sm:space-y-0">
+          <div className="flex flex-col sm:flex-row justify-between items-center mt-10 space-y-4 sm:space-y-0">
             <Button 
               variant="outline" 
               onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}

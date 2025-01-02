@@ -24,8 +24,7 @@ const HowItWorks = forwardRef<HTMLDivElement>((props, ref) => {
     >
       <div className="max-w-6xl mx-auto">
         <h2 
-          className="text-4xl md:text-5xl font-bold text-center mb-12 
-          text-white tracking-tight leading-tight 
+          className="text-4xl md:text-5xl font-bold text-center mb-12 tracking-wide leading-tight 
           hover:text-cyan-400 transition-colors duration-300"
         >
           Three Simple Steps to Manage Your Event
@@ -36,10 +35,10 @@ const HowItWorks = forwardRef<HTMLDivElement>((props, ref) => {
             <div
               key={index}
               className="group relative p-6 rounded-2xl 
-              bg-zinc-900/50 backdrop-blur-lg 
-              border border-zinc-800 
+              bg-zinc-50 backdrop-blur-lg 
+              border border-zinc-200 
               hover:border-cyan-400 
-              transition-all duration-500 
+              transition-all duration-500 ease-in-out
               transform hover:-translate-y-2 hover:shadow-2xl"
             >
               <div 
@@ -47,21 +46,21 @@ const HowItWorks = forwardRef<HTMLDivElement>((props, ref) => {
                 text-transparent bg-clip-text 
                 bg-gradient-to-r from-cyan-400 to-indigo-600 
                 group-hover:from-indigo-600 group-hover:to-cyan-400 
-                transition-all duration-500"
+                transition-all duration-500 ease-in-out"
               >
                 {index + 1}
               </div>
               <h3 
                 className="text-xl font-semibold mb-3 
-                text-white group-hover:text-cyan-400 
-                transition-colors duration-300"
+                text-black group-hover:text-cyan-400 
+                transition-colors duration-300 ease-in-out"
               >
                 {step.title}
               </h3>
               <p 
-                className="text-slate-400 
-                group-hover:text-white 
-                transition-colors duration-300"
+                className="text-slate-600 
+                group-hover:text-black 
+                transition-colors duration-300 ease-in-out"
               >
                 {step.description}
               </p>

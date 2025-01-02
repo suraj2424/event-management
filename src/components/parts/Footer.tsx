@@ -33,29 +33,21 @@ const Footer = () => {
 
   return (
     <footer 
-      className="bg-slate-950 backdrop-blur-lg py-16 
-      border-t border-zinc-800"
+      className="backdrop-blur-lg py-16 
+      border-t border-zinc-200"
     >
       <div className="container max-w-6xl mx-auto px-4">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           {/* Logo and Tagline */}
           <div className="flex flex-col items-center md:items-start">
-            {/* <Image
-              src={MAIN_LOGO}
-              alt="Evenzia Logo"
-              width={200}
-              height={200}
-              className="object-contain mb-4"
-            /> */}
             <h3 
-              className="text-2xl font-bold text-white 
-              hover:text-cyan-400 transition-colors duration-300"
+              className="text-2xl font-thin 
+              hover:text-cyan-400 transition-colors duration-300 ease-in-out"
             >
               EVENZIA
             </h3>
             <p 
-              className="text-center md:text-left text-slate-400 
-              hover:text-white transition-colors duration-300"
+              className="text-center md:text-left mt-2"
             >
               Transforming the event landscape, one experience at a time.
             </p>
@@ -65,7 +57,7 @@ const Footer = () => {
           <div className="flex flex-col items-center md:items-start">
             <h4 
               className="text-lg font-bold mb-4 
-              text-white hover:text-cyan-400 
+              tracking-wide hover:text-cyan-400 
               transition-colors duration-300"
             >
               Quick Links
@@ -75,10 +67,10 @@ const Footer = () => {
                 <li key={link}>
                   <a 
                     href="#" 
-                    className="text-slate-400 
+                    className="text-black
                     hover:text-cyan-400 
                     hover:underline 
-                    transition-colors duration-300"
+                    transition-colors duration-300 ease-in-out tracking-wide"
                   >
                     {link}
                   </a>
@@ -91,7 +83,7 @@ const Footer = () => {
           <div className="flex flex-col items-center md:items-start">
             <h4 
               className="text-lg font-bold mb-4 
-              text-white hover:text-cyan-400 
+              tracking-wide hover:text-cyan-400 
               transition-colors duration-300"
             >
               Connect With Us
@@ -112,10 +104,9 @@ const Footer = () => {
               ))}
             </div>
             
-            <div className="text-center md:text-left text-slate-400">
+            <div className="text-center md:text-left">
               <p 
-                className="hover:text-white 
-                transition-colors duration-300 mb-1"
+                className="transition-colors duration-300 mb-1"
               >
                 surajsuryawanshi2424@gmail.com
               </p>
@@ -130,7 +121,7 @@ const Footer = () => {
         </div>
 
         <div 
-          className="mt-12 pt-6 border-t border-zinc-800 
+          className="mt-12 pt-6 border-t border-zinc-200 
           text-center text-sm text-slate-500 
           hover:text-white transition-colors duration-300"
         >

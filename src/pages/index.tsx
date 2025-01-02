@@ -26,47 +26,48 @@ const LandingPage: React.FC = () => {
     (sectionName: keyof typeof sectionRefs) => {
       sectionRefs[sectionName].current?.scrollIntoView({ behavior: "smooth" });
     },
-    []);
+    []
+  );
 
-    const [isLoading, setIsLoading] = React.useState(true);
+  const [isLoading, setIsLoading] = React.useState(true);
 
-    React.useEffect(() => {
-      const timer = setTimeout(() => {
-        setIsLoading(false);
-      }, 1000);
-      return () => clearTimeout(timer);
-    }, []);
+  React.useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsLoading(false);
+    }, 1000);
+    return () => clearTimeout(timer);
+  }, []);
 
-    if (isLoading) {
-      return (
-        <div className="fixed inset-0 bg-slate-950 z-50 flex flex-col items-center justify-center">
-          <div className="w-64 h-4 bg-slate-800 overflow-hidden shadow-lg">
-            <div className="h-full bg-gradient-to-r from-slate-400 to-slate-500 animate-progress" />
-          </div>
-          <p className="text-gray-300 mt-4 font-semibold">Loading Evenzia...</p>
-          <style jsx>{`
-            @keyframes progress {
-              0% {
-                transform: translateX(-100%);
-              }
-              100% {
-                transform: translateX(100%);
-              }
-            }
-            .animate-progress {
-              animation: progress 1.5s linear infinite;
-              width: 100%;
-            }
-          `}</style>
-        </div>
-      );
+  if (isLoading) {
+    return (
+      <div className="fixed inset-0 bg-white z-50 flex flex-col items-center justify-center">
+  <div className="w-64 h-1 bg-gray-100 overflow-hidden">
+    <div className="h-full bg-black animate-progress" />
+  </div>
+  <p className="text-gray-800 mt-4 font-light tracking-widest text-sm">
+    LOADING
+  </p>
+  <style jsx>{`
+    @keyframes progress {
+      0% { transform: translateX(-100%); }
+      100% { transform: translateX(100%); }
     }
+    .animate-progress {
+      animation: progress 1.5s linear infinite;
+      width: 100%;
+    }
+  `}</style>
+</div>
+    );
+  }
 
   return (
-    <motion.div className="min-h-screen bg-gradient-to-br from-slate-900 to-gray-950 font-Nunito selection:bg-emerald-600"
-    initial={{ opacity:0}}
-    animate={{opacity:1}}
-    exit={{opacity:0}}>
+    <motion.div
+      className="min-h-screen  font-Nunito selection:bg-cyan-400"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+    >
       <Header
         onFeaturesClick={() => scrollToSection("features")}
         onHowItWorksClick={() => scrollToSection("howItWorks")}
@@ -79,7 +80,7 @@ const LandingPage: React.FC = () => {
           <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center space-y-8 md:space-y-0 md:space-x-12">
             <div className="w-full md:w-1/2 text-center md:text-left">
               <h1
-                className="text-3xl md:text-5xl mb-4 text-slate-300 tracking-tight leading-tight 
+                className="text-3xl md:text-5xl mb-4 text-slate-600 tracking-tight leading-tight 
             transition-all duration-500 ease-in-out hover:text-cyan-400"
               >
                 Streamline your Events with
@@ -93,7 +94,7 @@ const LandingPage: React.FC = () => {
               </div>
 
               <p
-                className="text-lg md:text-xl mb-8 text-slate-400 max-w-md mx-auto md:mx-0 
+                className="text-lg md:text-xl mb-8 text-slate-500 max-w-md mx-auto md:mx-0 
             opacity-80 hover:opacity-100 transition-opacity duration-300"
               >
                 Where Planning Meets Innovation
@@ -113,9 +114,7 @@ const LandingPage: React.FC = () => {
             </div>
 
             <div className="w-full md:w-1/2 flex justify-center">
-              <div
-                className="w-full max-w-md transform transition-transform duration-700"
-              >
+              <div className="w-full max-w-md transform transition-transform duration-700">
                 <Image
                   src={ILLUSTRATION1}
                   alt="Event Illustration"

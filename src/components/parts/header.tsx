@@ -2,10 +2,20 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { useSession, signOut } from 'next-auth/react';
 import { Button } from "@/components/ui/button";
-
+import {motion} from 'framer-motion'
 import { useRouter } from 'next/navigation'
-
-
+import { 
+  Compass, 
+  LogIn, 
+  LayoutGrid, 
+  User, 
+  LogOut,
+  Settings,
+  LayoutDashboard, 
+  CalendarRange, 
+  UserCircle,
+  ChevronDown
+} from 'lucide-react';
 
 import {
   DropdownMenu,
@@ -15,7 +25,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { User, LogOut, Menu, X } from 'lucide-react';
+import { Menu, X } from 'lucide-react';
 
 interface HeaderProps {
   onFeaturesClick: () => void;
@@ -40,22 +50,22 @@ const Header: React.FC<HeaderProps> = ({
   const NavItems = () => (
     <>
       <li>
-        <button onClick={onFeaturesClick} className='text-white text-sm p-2 hover:bg-white hover:text-black transition-all duration-300 ease-in-out rounded'>
+        <button onClick={onFeaturesClick} className=' text-sm p-2 hover:bg-black hover:text-white transition-all duration-300 ease-in-out rounded'>
           Features
         </button>
       </li>
       <li>
-        <button onClick={onHowItWorksClick} className='text-white text-sm p-2 hover:bg-white hover:text-black transition-all duration-300 ease-in-out rounded'>
+        <button onClick={onHowItWorksClick} className=' text-sm p-2 hover:bg-black hover:text-white transition-all duration-300 ease-in-out rounded'>
           How It Works
         </button>
       </li>
       <li>
-        <button onClick={onTestimonialsClick} className='text-white text-sm p-2 hover:bg-white hover:text-black transition-all duration-300 ease-in-out rounded'>
+        <button onClick={onTestimonialsClick} className=' text-sm p-2 hover:bg-black hover:text-white transition-all duration-300 ease-in-out rounded'>
           Testimonials
         </button>
       </li>
       <li>
-        <button onClick={onAboutClick} className='text-white text-sm p-2 hover:bg-white hover:text-black transition-all duration-300 ease-in-out rounded'>
+        <button onClick={onAboutClick} className=' text-sm p-2 hover:bg-black hover:text-white transition-all duration-300 ease-in-out rounded'>
           About
         </button>
       </li>
@@ -65,11 +75,11 @@ const Header: React.FC<HeaderProps> = ({
   const router = useRouter();
 
   return (
-    <header className="text-black py-5">
+    <header className="text-black py-5 tracking-wide">
       <div className="container mx-auto px-10">
         <nav className="flex justify-between items-center">
           <div className="flex items-center">
-            <p className='text-xl text-white hover:cursor-pointer' onClick={()=>{
+            <p className='text-xl hover:cursor-pointer' onClick={()=>{
               router.push('/')
             }}>EVENZIA</p>
           </div>
@@ -99,34 +109,61 @@ const Header: React.FC<HeaderProps> = ({
               ) : session ? (
                 <div className="flex items-center space-x-4">
                   <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="outline" className='text-black'>
-                        <User className="mr-2 h-4 w-4" />
-                        {session.user?.name || 'Account'}
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent className="w-56">
-                      <DropdownMenuLabel>My Account</DropdownMenuLabel>
-                      <DropdownMenuSeparator />
-                      { session.user?.role === 'ORGANIZER' ? (
-                        <DropdownMenuItem asChild>
-                            <Link href="/manage-events">Manage Events</Link>
-                        </DropdownMenuItem>
-                      ) : (
-                        <DropdownMenuItem asChild>
-                          <Link href="/profile">Dashboard</Link>
-                        </DropdownMenuItem>
-                      ) }
-                      <DropdownMenuItem asChild>
-                        <Link href="/profile">Profile</Link>
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem onClick={() => signOut()} className="text-red-600">
-                        <LogOut className="mr-2 h-4 w-4" />
-                        <span>Log out</span>
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+  <DropdownMenuTrigger asChild>
+    <Button variant="outline" className="text-black flex items-center gap-2">
+      <User className="h-4 w-4" />
+      <span>{session.user?.name || 'Account'}</span>
+      <ChevronDown className="h-4 w-4 ml-2 opacity-50" />
+    </Button>
+  </DropdownMenuTrigger>
+  <DropdownMenuContent className="w-56" align="end">
+    <DropdownMenuLabel className="flex items-center gap-2">
+      <UserCircle className="h-4 w-4" />
+      <span>My Account</span>
+    </DropdownMenuLabel>
+    <DropdownMenuSeparator />
+    
+    {session.user?.role === 'ORGANIZER' ? (
+      <DropdownMenuItem asChild>
+        <Link href="/manage-events" className="flex items-center gap-2">
+          <CalendarRange className="h-4 w-4" />
+          <span>Manage Events</span>
+        </Link>
+      </DropdownMenuItem>
+    ) : (
+      <DropdownMenuItem asChild>
+        <Link href="/profile" className="flex items-center gap-2">
+          <LayoutDashboard className="h-4 w-4" />
+          <span>Dashboard</span>
+        </Link>
+      </DropdownMenuItem>
+    )}
+    
+    <DropdownMenuItem asChild>
+      <Link href="/profile" className="flex items-center gap-2">
+        <User className="h-4 w-4" />
+        <span>Profile</span>
+      </Link>
+    </DropdownMenuItem>
+    
+    <DropdownMenuItem asChild>
+      <Link href="/settings" className="flex items-center gap-2">
+        <Settings className="h-4 w-4" />
+        <span>Settings</span>
+      </Link>
+    </DropdownMenuItem>
+    
+    <DropdownMenuSeparator />
+    
+    <DropdownMenuItem 
+      onClick={() => signOut()} 
+      className="text-red-600 focus:text-red-50 focus:bg-red-600"
+    >
+      <LogOut className="h-4 w-4 mr-2" />
+      <span>Log out</span>
+    </DropdownMenuItem>
+  </DropdownMenuContent>
+</DropdownMenu>
                 </div>
               ) : (
                 <Button variant="default" asChild>
@@ -139,42 +176,89 @@ const Header: React.FC<HeaderProps> = ({
 
         {/* Mobile Menu */}
         {mobileMenuOpen && (
-          <div className="md:hidden mt-4">
-            <ul className="flex flex-col space-y-2">
-              <NavItems />
-              <li>
-                <Button variant="destructive" asChild className="w-full">
-                  <Link href="/events">Explore Events</Link>
-                </Button>
-              </li>
-              {status !== "loading" && !session && (
-                <li>
-                  <Button variant="default" asChild className="w-full">
-                    <Link href="/signin">Sign In</Link>
-                  </Button>
-                </li>
-              )}
-              {session && (
-                <>
-                  <li>
-                    <Link href="/dashboard" className="block p-2 text-white hover:bg-white hover:text-black transition-all duration-300 ease-in-out rounded">
-                      Dashboard
-                    </Link>
-                  </li>
-                  <li>
-                    <Link href="/profile" className="block p-2 text-white hover:bg-white hover:text-black transition-all duration-300 ease-in-out rounded">
-                      Profile
-                    </Link>
-                  </li>
-                  <li>
-                    <button onClick={() => signOut()} className="w-full text-left p-2 text-red-600 hover:bg-red-600 hover:text-white transition-all duration-300 ease-in-out rounded">
-                      Log out
-                    </button>
-                  </li>
-                </>
-              )}
-            </ul>
-          </div>
+          <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3 }}
+          className="md:hidden mt-4 px-4"
+        >
+          <div className="md:hidden mt-4 px-4">
+  <ul className="flex flex-col space-y-3">
+    <NavItems />
+    <li>
+      <Button 
+        variant="default" 
+        asChild 
+        className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white shadow-lg transition-all duration-300 ease-in-out transform hover:scale-[1.02]"
+      >
+        <Link href="/events" className="flex items-center justify-center gap-2">
+          <Compass className="w-5 h-5" />
+          <span>Explore Events</span>
+        </Link>
+      </Button>
+    </li>
+    
+    {status !== "loading" && !session && (
+      <li>
+        <Button 
+          variant="outline" 
+          asChild 
+          className="w-full border-2 border-gray-700 hover:bg-gray-800 text-gray-200 hover:text-white transition-all duration-300"
+        >
+          <Link href="/signin" className="flex items-center justify-center gap-2">
+            <LogIn className="w-5 h-5" />
+            <span>Sign In</span>
+          </Link>
+        </Button>
+      </li>
+    )}
+    
+    {session && (
+      <>
+        <li>
+          <Link 
+            href="/dashboard" 
+            className="flex items-center gap-2 p-3 text-gray-200 hover:bg-gray-800 rounded-lg transition-all duration-300 ease-in-out"
+          >
+            <LayoutGrid className="w-5 h-5" />
+            <span>Dashboard</span>
+          </Link>
+        </li>
+        
+        <li>
+          <Link 
+            href="/profile" 
+            className="flex items-center gap-2 p-3 text-gray-200 hover:bg-gray-800 rounded-lg transition-all duration-300 ease-in-out"
+          >
+            <User className="w-5 h-5" />
+            <span>Profile</span>
+          </Link>
+        </li>
+
+        <li>
+          <Link 
+            href="/settings" 
+            className="flex items-center gap-2 p-3 text-gray-200 hover:bg-gray-800 rounded-lg transition-all duration-300 ease-in-out"
+          >
+            <Settings className="w-5 h-5" />
+            <span>Settings</span>
+          </Link>
+        </li>
+        
+        <li>
+          <button 
+            onClick={() => signOut()} 
+            className="w-full flex items-center gap-2 p-3 text-red-500 hover:bg-red-500 hover:text-white rounded-lg transition-all duration-300 ease-in-out"
+          >
+            <LogOut className="w-5 h-5" />
+            <span>Log out</span>
+          </button>
+        </li>
+      </>
+    )}
+  </ul>
+</div>
+          </motion.div>
         )}
       </div>
     </header>

@@ -7,27 +7,28 @@ interface FeatureCardProps {
   description: string;
   bgColor: string;
   textColor: string;
+  borderColor: string;
 }
 
-const FeatureCard = ({ icon, title, description, bgColor, textColor }: FeatureCardProps) => {
+const FeatureCard = ({ icon, title, description, bgColor, textColor, borderColor }: FeatureCardProps) => {
   return (
     <div 
-      className={`${bgColor} ${textColor} p-6 rounded-2xl 
-      transform transition-all duration-500 ease-in-out 
-      hover:scale-105 hover:shadow-2xl 
+      className={`${bgColor} ${textColor} border-${borderColor} p-6 rounded-md 
+      transform transition-all duration-400 ease-in-out
+      hover:shadow-2xl 
       flex flex-col justify-between 
-      border border-opacity-10 border-white`}
+      border border-opacity-50 border-white`}
     >
       <div>
         <div className="mb-4 flex justify-center">
           {React.cloneElement(icon, {
-            className: "w-12 h-12 mb-4 opacity-80 group-hover:opacity-100 transition-opacity"
+            className: "w-12 h-12 mb-4 opacity-80 group-hover:opacity-100 transition-opacity ease-in-out duration-300"
           })}
         </div>
         <h3 
           className="text-xl font-bold mb-3 text-center 
           transition-colors duration-300 
-          group-hover:text-white"
+          group-hover:text-white ease-in-out"
         >
           {title}
         </h3>
@@ -46,25 +47,28 @@ const FeatureCard = ({ icon, title, description, bgColor, textColor }: FeatureCa
 const FeaturesSection = forwardRef<HTMLElement>((_, ref) => {
   const features = [
     {
-      icon: <Calendar className="text-yellow-400" />,
+      icon: <Calendar className="text-yellow-700" />,
       title: "Seamless Event Registration",
       description: "Say goodbye to complex registration processes. Explore events tailored to your interests and register with just a few clicks.",
-      bgColor: "bg-yellow-900/50 group",
-      textColor: "text-yellow-100",
+      bgColor: "bg-yellow-900 group",
+      textColor: "text-yellow-300",
+      borderColor: "border-yellow-300",
     },
     {
-      icon: <Users className="text-sky-400" />,
+      icon: <Users className="text-sky-700" />,
       title: "Advanced Event Management",
       description: "Manage every aspect of your events with our robust platform. From ticketing to analytics, we've got you covered.",
-      bgColor: "bg-sky-900/50 group",
-      textColor: "text-sky-100",
+      bgColor: "bg-sky-900 group",
+      textColor: "text-sky-300",
+      borderColor: "border-sky-300",
     },
     {
-      icon: <Zap className="text-green-400" />,
+      icon: <Zap className="text-green-700" />,
       title: "Scalable Infrastructure",
       description: "Built with Next.js and PostgreSQL, our platform handles growth effortlessly. Host events of any size with speed and reliability.",
-      bgColor: "bg-green-900/50 group",
-      textColor: "text-green-100",
+      bgColor: "bg-green-900 group",
+      textColor: "text-green-300",
+      borderColor: "border-green-300",
     },
   ];
 
@@ -77,13 +81,13 @@ const FeaturesSection = forwardRef<HTMLElement>((_, ref) => {
       <div className="max-w-6xl mx-auto">
         <h2 
           className="text-4xl md:text-5xl font-bold text-center mb-16 
-          text-white tracking-tight leading-tight"
+          tracking-tight leading-tight"
         >
           Powerful Tools to Transform Your{" "}
           <span 
-            className="text-cyan-400 
+            className="text-cyan-700 
             transition-colors duration-500 
-            hover:text-cyan-300"
+            hover:text-cyan-500"
           >
             Event Experience
           </span>

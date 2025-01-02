@@ -31,13 +31,13 @@ const EventSearch = () => {
       <div className="space-y-6">
         <div className="text-center mb-8">
           <h3 
-            className="text-2xl md:text-3xl font-bold text-white mb-3 
+            className="text-2xl md:text-3xl font-bold mb-3 
             transition-colors duration-300 hover:text-cyan-400"
           >
             Find Your Next Event
           </h3>
           <p 
-            className="text-slate-400 text-base 
+            className="text-slate-700 text-base 
             opacity-70 hover:opacity-100 transition-opacity"
           >
             Search for events by keyword, category, or location
@@ -50,29 +50,29 @@ const EventSearch = () => {
             placeholder="Search events..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full py-3 px-4 rounded-xl 
-            bg-zinc-800/50 text-white 
-            border border-zinc-700 
+            className="w-full py-3 px-4 rounded-sm 
+            bg-zinc-50 
+            border border-zinc-200 
             focus:outline-none focus:ring-2 focus:ring-cyan-400 
-            transition-all duration-300 
-            placeholder-slate-500"
+            transition-all duration-300 selection:text-white tracking-wide
+            placeholder-slate-400"
           />
           
           <select
             value={category}
             onChange={(e) => setCategory(e.target.value)}
-            className="w-full py-3 px-4 rounded-xl 
-            bg-zinc-800/50 text-white 
-            border border-zinc-700 
+            className="w-full py-3 px-4 rounded-sm
+            bg-zinc-50 
+            border border-zinc-200 
             focus:outline-none focus:ring-2 focus:ring-cyan-400 
             transition-all duration-300"
           >
-            <option value="" className="bg-zinc-900">Category</option>
+            <option value="" className="">Category</option>
             {categories.map((cat) => (
               <option 
                 key={cat.value} 
                 value={cat.value}
-                className="bg-zinc-900"
+                className=""
               >
                 {cat.label}
               </option>
@@ -82,18 +82,18 @@ const EventSearch = () => {
           <select
             value={location}
             onChange={(e) => setLocation(e.target.value)}
-            className="w-full py-3 px-4 rounded-xl 
-            bg-zinc-800/50 text-white 
-            border border-zinc-700 
+            className="w-full py-3 px-4 rounded-sm
+            bg-zinc-50
+            border border-zinc-200 
             focus:outline-none focus:ring-2 focus:ring-cyan-400 
             transition-all duration-300"
           >
-            <option value="" className="bg-zinc-900">Location</option>
+            <option value="" className="">Location</option>
             {locations.map((loc) => (
               <option 
                 key={loc.value} 
                 value={loc.value}
-                className="bg-zinc-900"
+                className=""
               >
                 {loc.label}
               </option>
@@ -103,13 +103,12 @@ const EventSearch = () => {
           <button
             onClick={handleSearch}
             className="w-full py-3 px-6 rounded-full 
-            bg-cyan-400 text-black 
+            bg-cyan-400 text-white 
             font-bold 
-            hover:bg-cyan-300 
-            transition-all duration-300 
+            hover:bg-cyan-500 
+            transition-all duration-150 ease-in-out 
             flex items-center justify-center 
             space-x-2 
-            transform hover:scale-105 
             active:scale-95"
           >
             <Search className="w-5 h-5" />

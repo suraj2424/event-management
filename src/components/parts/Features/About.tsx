@@ -10,16 +10,16 @@ const About = forwardRef<HTMLDivElement>((props, ref) => {
       <div className="max-w-4xl mx-auto">
         <h2 
           className="text-4xl md:text-5xl font-bold text-center mb-8 
-          text-white tracking-tight leading-tight 
-          hover:text-cyan-400 transition-colors duration-300"
+          tracking-wide leading-tight 
+          hover:text-cyan-400 transition-colors duration-300 ease-in-out"
         >
           Who We Are
         </h2>
         <p 
-          className="text-center text-base md:text-lg text-slate-400 
+          className="text-center text-base md:text-lg text-slate-500 
           leading-relaxed 
-          hover:text-white 
-          transition-colors duration-300"
+          hover:text-black 
+          transition-colors duration-300 ease-in-out"
         >
           At EVENZIA, we believe in making event planning and participation as effortless as possible. Our dedicated team of developers and event professionals has worked tirelessly to craft a platform that meets the needs of both organizers and attendees. With cutting-edge technology at our fingertips, our mission is to create memorable, engaging events that bring people together.
         </p>
