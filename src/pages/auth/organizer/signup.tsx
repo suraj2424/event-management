@@ -73,7 +73,7 @@ export default function ModernSignUpPage() {
 
       if (response.ok) {
         toast.success("Account created successfully!");
-        router.push("/signin");
+        router.push("/auth/organizer/signin");
       } else {
         const data = await response.json();
         toast.error(data.message || "An error occurred. Please try again.");

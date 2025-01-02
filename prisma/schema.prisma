@@ -47,11 +47,10 @@ model Event {
   hostDescription String
   socialLinks     SocialLinks?   @relation("EventSocialLinks", fields: [socialLinksId], references: [id])
   socialLinksId   Int?
-  specialGuests   SpecialGuest[]
-  attendance      Attendance[]
-  organizer       User           @relation("Organizer", fields: [organizerId], references: [id])
-  organizerId     String
-
+  specialGuests   SpecialGuest[] @relation("EventSpecialGuests")
+  attendance      Attendance[]   @relation("EventAttendance")
+  organizer   User   @relation("Organizer", fields: [organizerId], references: [id], onDelete: Cascade)
+  organizerId String
   @@map("events")
 }
 
@@ -60,7 +59,7 @@ model SpecialGuest {
   guestName        String
   guestDescription String
   eventId          Int
-  event            Event  @relation(fields: [eventId], references: [id])
+  event            Event  @relation("EventSpecialGuests", fields: [eventId], references: [id], onDelete: Cascade)
 
   @@map("special_guests")
 }
@@ -88,8 +87,8 @@ model Attendance {
   status    AttendanceStatus
   createdAt DateTime         @default(now())
   updatedAt DateTime         @updatedAt
-  user      User             @relation(fields: [userId], references: [id])
-  event     Event            @relation(fields: [eventId], references: [id])
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  event     Event            @relation("EventAttendance", fields: [eventId], references: [id], onDelete: Cascade)
 
   @@unique([userId, eventId])
 }
