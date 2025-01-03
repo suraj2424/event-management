@@ -76,57 +76,108 @@ const LandingPage: React.FC = () => {
       />
 
       <main className="container mx-auto px-4 sm:px-6 lg:px-8">
-        <section className="min-h-screen flex items-center justify-center px-4 md:px-12">
-          <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center space-y-8 md:space-y-0 md:space-x-12">
-            <div className="w-full md:w-1/2 text-center md:text-left">
-              <h1
-                className="text-3xl md:text-5xl mb-4 text-slate-600 tracking-tight leading-tight 
-            transition-all duration-500 ease-in-out hover:text-cyan-400"
-              >
-                Streamline your Events with
-              </h1>
+      <section className="min-h-screen relative overflow-hidden bg-white">
+  {/* Gradient Orbs */}
+  <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-gradient-to-br from-indigo-100 via-purple-50 to-transparent rounded-full blur-3xl opacity-60" />
+  <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-gradient-to-tr from-cyan-50 via-blue-50 to-transparent rounded-full blur-3xl opacity-60" />
 
-              <div
-                className="text-cyan-400 text-5xl md:text-7xl font-bold mb-4 
-            transform transition-transform duration-700 hover:scale-105"
-              >
-                EVENZIA
-              </div>
-
-              <p
-                className="text-lg md:text-xl mb-8 text-slate-500 max-w-md mx-auto md:mx-0 
-            opacity-80 hover:opacity-100 transition-opacity duration-300"
-              >
-                Where Planning Meets Innovation
-              </p>
-
-              <Button
-                className="w-full md:w-auto px-8 py-3 
-            bg-indigo-600 text-white 
-            hover:bg-indigo-700 
-            transition-all duration-300 
-            rounded-full 
-            shadow-lg hover:shadow-xl"
-                onClick={() => router.push("/events")}
-              >
-                Get Started Now
-              </Button>
-            </div>
-
-            <div className="w-full md:w-1/2 flex justify-center">
-              <div className="w-full max-w-md transform transition-transform duration-700">
-                <Image
-                  src={ILLUSTRATION1}
-                  alt="Event Illustration"
-                  width={600}
-                  height={600}
-                  className="w-full h-auto object-contain"
-                  priority
-                />
-              </div>
-            </div>
+  <div className="relative z-10 container mx-auto px-4 py-20">
+    <div className="flex flex-col lg:flex-row items-center justify-between gap-12">
+      {/* Content Section */}
+      <div className="flex-1 space-y-8">
+        <div className="space-y-4">
+          <div className="inline-flex items-center px-4 py-2 bg-indigo-50 rounded-full">
+            <span className="w-2 h-2 bg-indigo-500 rounded-full animate-pulse" />
+            <span className="ml-2 text-sm text-indigo-600 font-medium">
+              Launching Something Special
+            </span>
           </div>
-        </section>
+          
+          <h1 className="text-5xl md:text-7xl font-bold">
+            <span className="text-slate-800">Make your</span>
+            <br />
+            <span className="bg-clip-text text-transparent bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500">
+              events matter
+            </span>
+          </h1>
+          
+          <p className="text-slate-600 text-lg md:text-xl max-w-xl">
+            Create, manage, and celebrate moments that leave lasting impressions.
+            Your all-in-one platform for exceptional event experiences.
+          </p>
+        </div>
+
+        {/* CTA Buttons */}
+        <div className="flex flex-col sm:flex-row gap-4">
+          <Button
+            className="group relative px-8 py-6 bg-gradient-to-r from-indigo-500 to-purple-500 
+                       rounded-xl hover:opacity-90 transition-all duration-300 shadow-lg 
+                       hover:shadow-indigo-200"
+            onClick={() => router.push("/events")}
+          >
+            <span className="relative z-10 text-white font-medium">Get Started</span>
+            <div className="absolute inset-0 bg-white/20 rounded-xl opacity-0 
+                          group-hover:opacity-100 transition-opacity" />
+          </Button>
+
+          <Button
+            variant="outline"
+            className="px-8 py-6 border-2 border-slate-200 text-slate-600 
+                     hover:bg-slate-50 rounded-xl"
+          >
+            Watch Demo
+          </Button>
+        </div>
+
+        {/* Features Grid */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-6 pt-12">
+          {[
+            { icon: "🎯", label: "Smart Planning", value: "Simplified" },
+            { icon: "🔒", label: "Security", value: "Enterprise-grade" },
+            { icon: "⚡", label: "Performance", value: "Lightning-fast" },
+            { icon: "🤝", label: "Support", value: "24/7 Help" },
+          ].map((feature) => (
+            <div key={feature.label} className="p-4 rounded-xl bg-slate-50 
+                                              hover:bg-slate-100 transition-colors">
+              <div className="text-2xl mb-2">{feature.icon}</div>
+              <div className="text-sm text-slate-600">{feature.label}</div>
+              <div className="text-sm font-semibold text-slate-800">
+                {feature.value}
+              </div>
+            </div>
+          ))}
+        </div>
+
+      </div>
+
+      {/* 3D Abstract Element */}
+      <div className="flex-1 relative">
+        <div className="relative aspect-square max-w-[500px] mx-auto">
+          {/* Abstract 3D Shapes */}
+          <div className="absolute inset-0 grid grid-cols-2 gap-4 animate-float">
+            {[...Array(4)].map((_, i) => (
+              <div
+                key={i}
+                className={`
+                  rounded-2xl bg-gradient-to-br
+                  ${i % 2 === 0 
+                    ? 'from-indigo-400 to-purple-400' 
+                    : 'from-pink-400 to-rose-400'}
+                  p-8 transform transition-transform duration-500
+                  hover:scale-105 shadow-lg
+                  ${i % 3 === 0 ? 'translate-y-4' : ''}
+                  ${i % 2 === 0 ? 'translate-x-2' : '-translate-x-2'}
+                `}
+              >
+                <div className="w-full h-full rounded-xl bg-white/20" />
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
 
         <FeaturesSection ref={sectionRefs.features} />
 

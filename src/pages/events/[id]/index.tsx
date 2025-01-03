@@ -10,6 +10,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Calendar, MapPin, Users, Clock, ArrowLeft, X, Facebook, Twitter, Instagram } from 'lucide-react';
 import { format } from 'date-fns';
 import toast from 'react-hot-toast';
+import { motion } from 'framer-motion';
 
 interface SocialLinks {
   facebook?: string;
@@ -304,14 +305,19 @@ const EventDetailPage: React.FC = () => {
   }
 
   return (
-    <div className="max-w-4xl mx-auto mt-8 px-4">
-      <Button variant="ghost" onClick={() => router.back()} className="mb-4">
+    <motion.div 
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.5 }}
+      className="max-w-4xl mx-auto mt-8 px-4"
+    >
+      <Button variant="ghost" onClick={() => router.back()} className="mb-4 hover:bg-gray-100">
         <ArrowLeft className="mr-2 h-4 w-4" /> Back to Events
       </Button>
       
-      <Card className="overflow-hidden">
+      <Card className="overflow-hidden shadow-lg">
         {event.logo && (
-          <div className="relative h-64 w-full">
+          <div className="relative h-80 w-full">
             <Image
               src={event.logo}
               alt={`${event.title} logo`}
@@ -320,69 +326,73 @@ const EventDetailPage: React.FC = () => {
               priority
               style={{ objectFit: 'cover' }}
             />
-          </div>
-        )}
-        
-        <CardContent className="p-6">
-          <CardHeader className="p-0 mb-4">
-            <div className="flex justify-between items-start">
-              <CardTitle className="text-3xl">{event.title}</CardTitle>
+            <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+            <div className="absolute bottom-4 left-4 right-4">
+              <h1 className="text-3xl font-bold text-white mb-2">{event.title}</h1>
               <Badge className={`${
-                event.status === "ONGOING" ? "bg-green-600" : 
-                event.status === "UPCOMING" ? "bg-yellow-600" : "bg-red-600"
+                event.status === "ONGOING" ? "bg-green-500" : 
+                event.status === "UPCOMING" ? "bg-yellow-500" : "bg-red-500"
               } text-white uppercase px-3 py-1`}>
                 {event.status}
               </Badge>
             </div>
-          </CardHeader>
-          
-          <div className="space-y-4">
-            <div className="flex items-center text-sm">
-              <Calendar className="w-5 h-5 mr-2 text-muted-foreground" />
-              <span>
-                {format(new Date(event.startDate), 'PPP')} - {format(new Date(event.endDate), 'PPP')}
-              </span>
+          </div>
+        )}
+        
+        <CardContent className="p-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-4">
+              <div className="flex items-center text-sm">
+                <Calendar className="w-5 h-5 mr-2 text-indigo-500" />
+                <span>{format(new Date(event.startDate), 'PPP')} - {format(new Date(event.endDate), 'PPP')}</span>
+              </div>
+              
+              <div className="flex items-center text-sm">
+                <Clock className="w-5 h-5 mr-2 text-indigo-500" />
+                <span>{format(new Date(event.startDate), 'p')} - {format(new Date(event.endDate), 'p')}</span>
+              </div>
+              
+              <div className="flex items-center text-sm">
+                <MapPin className="w-5 h-5 mr-2 text-indigo-500" />
+                <span>{event.location}</span>
+              </div>
+              
+              <div className="flex items-center text-sm">
+                <Users className="w-5 h-5 mr-2 text-indigo-500" />
+                <span>{event.capacity} capacity</span>
+              </div>
             </div>
-            
-            <div className="flex items-center text-sm">
-              <Clock className="w-5 h-5 mr-2 text-muted-foreground" />
-              <span>
-                {format(new Date(event.startDate), 'p')} - {format(new Date(event.endDate), 'p')}
-              </span>
-            </div>
-            
-            <div className="flex items-center text-sm">
-              <MapPin className="w-5 h-5 mr-2 text-muted-foreground" />
-              <span>{event.location}</span>
-            </div>
-            
-            <div className="flex items-center text-sm">
-              <Users className="w-5 h-5 mr-2 text-muted-foreground" />
-              <span>{event.capacity} capacity</span>
-            </div>
-            
+
             <div>
               <h3 className="text-lg font-semibold mb-2">Description</h3>
               <p className="text-sm text-gray-600">{event.description}</p>
             </div>
+          </div>
 
-            {/* Event Photos */}
-            {event.photos && event.photos.length > 0 && (
-              <div>
-                <h3 className="text-lg font-semibold mb-2">Event Photos</h3>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  {event.photos.map((photo, index) => (
-                    <div key={index} className="relative h-24 cursor-pointer" onClick={() => setSelectedPhoto(photo)}>
-                      <Image src={photo} alt={`Event photo ${index + 1}`} fill style={{ objectFit: 'cover' }} />
-                    </div>
-                  ))}
-                </div>
+          {/* Event Photos */}
+          {event.photos && event.photos.length > 0 && (
+            <div className="mt-6">
+              <h3 className="text-lg font-semibold mb-2">Event Photos</h3>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                {event.photos.map((photo, index) => (
+                  <motion.div 
+                    key={index} 
+                    className="relative h-24 cursor-pointer rounded-lg overflow-hidden"
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => setSelectedPhoto(photo)}
+                  >
+                    <Image src={photo} alt={`Event photo ${index + 1}`} fill style={{ objectFit: 'cover' }} />
+                  </motion.div>
+                ))}
               </div>
-            )}
-            
+            </div>
+          )}
+          
+          <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <h3 className="text-lg font-semibold mb-2">Host</h3>
-              <p className="text-sm">{event.hostName}</p>
+              <p className="text-sm font-medium">{event.hostName}</p>
               <p className="text-sm text-gray-600">{event.hostDescription}</p>
             </div>
 
@@ -398,54 +408,70 @@ const EventDetailPage: React.FC = () => {
                 ))}
               </div>
             )}
+          </div>
 
-            <div>
-              <h3 className="text-lg font-semibold mb-2">Contact Information</h3>
-              <p className="text-sm">Email: {event.contactEmail}</p>
-              <p className="text-sm">Phone: {event.contactPhone}</p>
-            </div>
-            
-            {/* Social Links */}
-            {eventDetails.socialLinks && (
+          <div className="mt-6">
+            <h3 className="text-lg font-semibold mb-2">Contact Information</h3>
+            <p className="text-sm">Email: {event.contactEmail}</p>
+            <p className="text-sm">Phone: {event.contactPhone}</p>
+          </div>
+          
+          {/* Social Links */}
+          {eventDetails.socialLinks && (
+            <div className="mt-6">
+              <h3 className="text-lg font-semibold mb-2">Social Media</h3>
               <div className="flex space-x-4">
                 {eventDetails.socialLinks.facebook && (
-                  <a href={eventDetails.socialLinks.facebook} target="_blank" rel="noopener noreferrer">
+                  <a href={eventDetails.socialLinks.facebook} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800">
                     <Facebook className="w-6 h-6" />
                   </a>
                 )}
                 {eventDetails.socialLinks.twitter && (
-                  <a href={eventDetails.socialLinks.twitter} target="_blank" rel="noopener noreferrer">
+                  <a href={eventDetails.socialLinks.twitter} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-600">
                     <Twitter className="w-6 h-6" />
                   </a>
                 )}
                 {eventDetails.socialLinks.instagram && (
-                  <a href={eventDetails.socialLinks.instagram} target="_blank" rel="noopener noreferrer">
+                  <a href={eventDetails.socialLinks.instagram} target="_blank" rel="noopener noreferrer" className="text-pink-600 hover:text-pink-800">
                     <Instagram className="w-6 h-6" />
                   </a>
                 )}
               </div>
-            )}
+            </div>
+          )}
+
+          <div className="mt-8">
+            {renderAttendanceButton()}
           </div>
-          {renderAttendanceButton()}
         </CardContent>
-      </Card>
+        </Card>
 
       {/* Full-screen photo preview */}
       {selectedPhoto && (
-        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
-          <div className="relative w-full h-full max-w-4xl max-h-4xl">
-            <Image src={selectedPhoto} alt="Full-screen preview" fill style={{ objectFit: 'contain' }} />
+        <motion.div 
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50"
+        >
+          <div className="relative w-full h-full max-w-4xl max-h-4xl p-4">
+            <Image 
+              src={selectedPhoto} 
+              alt="Full-screen preview" 
+              fill 
+              style={{ objectFit: 'contain' }} 
+            />
             <Button
-              className="absolute top-4 right-4"
-              variant="destructive"
+              className="absolute top-4 right-4 bg-white/10 hover:bg-white/20"
+              variant="ghost"
               onClick={() => setSelectedPhoto(null)}
             >
               <X className="h-6 w-6 text-white" />
             </Button>
           </div>
-        </div>
+        </motion.div>
       )}
-    </div>
+    </motion.div>
   );
 };
 

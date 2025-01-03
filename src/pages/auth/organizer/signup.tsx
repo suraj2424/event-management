@@ -270,7 +270,7 @@ export default function ModernSignUpPage() {
         >
           Already have an account?{" "}
           <Link 
-            href="/signin" 
+            href="/auth/organizer/signin" 
             className="font-medium text-blue-600 hover:text-blue-500 transition-colors duration-300"
           >
             Sign in here

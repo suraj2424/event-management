@@ -6,15 +6,13 @@ import {
   Sun, 
   Shield, 
   User,
+  Zap,
+  Palette,
+  Lock,
+  UserCog
 } from 'lucide-react';
-import { 
-  Tabs, 
-  TabsContent, 
-  TabsList, 
-  TabsTrigger 
-} from '@/components/ui/tabs';
+import { motion } from 'framer-motion';
 import { Switch } from '@/components/ui/switch';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { toast } from 'react-hot-toast';
 
@@ -66,130 +64,113 @@ export default function SettingsPage() {
     toast.success('Setting updated successfully');
   };
 
+  const settingsSections = [
+    {
+      title: "Notifications",
+      icon: Bell,
+      color: "bg-blue-100",
+      textColor: "text-blue-600",
+      settings: [
+        { label: "Email Notifications", key: "email" },
+        { label: "Push Notifications", key: "push" },
+        { label: "Event Reminders", key: "eventReminders" },
+      ]
+    },
+    {
+      title: "Appearance",
+      icon: Palette,
+      color: "bg-purple-100",
+      textColor: "text-purple-600",
+      settings: [
+        { label: "Dark Mode", key: "darkMode" },
+        { label: "Compact View", key: "compactView" },
+      ]
+    },
+    {
+      title: "Privacy",
+      icon: Lock,
+      color: "bg-green-100",
+      textColor: "text-green-600",
+      settings: [
+        { label: "Public Profile", key: "publicProfile" },
+        { label: "Show Event Attendance", key: "showAttendance" },
+      ]
+    },
+  ];
+
   return (
-    <div className="container max-w-4xl mx-auto py-8 px-4">
-      <h1 className="text-3xl font-bold mb-6">Settings</h1>
-      
-      <Tabs defaultValue="notifications" className="space-y-4">
-        <TabsList className="grid grid-cols-4 gap-4">
-          <TabsTrigger value="notifications">
-            <Bell className="w-4 h-4 mr-2" />
-            Notifications
-          </TabsTrigger>
-          <TabsTrigger value="appearance">
-            <Sun className="w-4 h-4 mr-2" />
-            Appearance
-          </TabsTrigger>
-          <TabsTrigger value="account">
-            <User className="w-4 h-4 mr-2" />
-            Account
-          </TabsTrigger>
-          <TabsTrigger value="privacy">
-            <Shield className="w-4 h-4 mr-2" />
-            Privacy
-          </TabsTrigger>
-        </TabsList>
+    <div className="h-screen overflow-y-auto p-4 sm:p-6 lg:p-8">
+      <motion.div 
+        className="max-w-4xl mx-auto"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+      >
+        <h1 className="text-3xl sm:text-4xl font-bold mb-8 text-center text-white">Your Settings Hub</h1>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {settingsSections.map((section) => (
+            <motion.div 
+              key={section.title} 
+              className="bg-white rounded-lg shadow-lg overflow-hidden"
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.3 }}
+            >
+              <div className={`p-4 ${section.color}`}>
+                <section.icon className={`w-6 h-6 ${section.textColor}`} />
+                <h2 className={`text-xl font-semibold mt-2 ${section.textColor}`}>{section.title}</h2>
+              </div>
+              <div className="p-4 space-y-3">
+                {section.settings.map((setting) => (
+                  <div key={setting.key} className="flex justify-between items-center">
+                    <label className="text-sm text-gray-700">{setting.label}</label>
+                    <Switch 
+                      checked={settings[section.title.toLowerCase() as keyof Settings][setting.key as keyof Settings[keyof Settings]]}
+                      onCheckedChange={() => handleSettingChange(section.title.toLowerCase() as keyof Settings, setting.key as keyof Settings[keyof Settings])}
+                    />
+                  </div>
+                ))}
+              </div>
+            </motion.div>
+          ))}
 
-        <TabsContent value="notifications">
-          <Card>
-            <CardHeader>
-              <CardTitle>Notification Preferences</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex justify-between items-center">
-                <label>Email Notifications</label>
-                <Switch 
-                  checked={settings.notifications.email}
-                  onCheckedChange={() => handleSettingChange('notifications', 'email')}
-                />
-              </div>
-              <div className="flex justify-between items-center">
-                <label>Push Notifications</label>
-                <Switch 
-                  checked={settings.notifications.push}
-                  onCheckedChange={() => handleSettingChange('notifications', 'push')}
-                />
-              </div>
-              <div className="flex justify-between items-center">
-                <label>Event Reminders</label>
-                <Switch 
-                  checked={settings.notifications.eventReminders}
-                  onCheckedChange={() => handleSettingChange('notifications', 'eventReminders')}
-                />
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
+          <motion.div 
+            className="bg-white rounded-lg shadow-lg overflow-hidden"
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.3, delay: 0.2 }}
+          >
+            <div className="p-4 bg-yellow-100">
+              <UserCog className="w-6 h-6 text-yellow-600" />
+              <h2 className="text-xl font-semibold mt-2 text-yellow-600">Account</h2>
+            </div>
+            <div className="p-4 space-y-3">
+              <p className="text-xs text-gray-600">
+                Logged in as: {session?.user?.email}
+              </p>
+              <Button variant="outline" className="w-full text-sm">
+                Change Password
+              </Button>
+              <Button variant="destructive" className="w-full text-sm">
+                Delete Account
+              </Button>
+            </div>
+          </motion.div>
+        </div>
 
-        <TabsContent value="appearance">
-          <Card>
-            <CardHeader>
-              <CardTitle>Appearance Settings</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex justify-between items-center">
-                <label>Dark Mode</label>
-                <Switch 
-                  checked={settings.appearance.darkMode}
-                  onCheckedChange={() => handleSettingChange('appearance', 'darkMode')}
-                />
-              </div>
-              <div className="flex justify-between items-center">
-                <label>Compact View</label>
-                <Switch 
-                  checked={settings.appearance.compactView}
-                  onCheckedChange={() => handleSettingChange('appearance', 'compactView')}
-                />
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="privacy">
-          <Card>
-            <CardHeader>
-              <CardTitle>Privacy Settings</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex justify-between items-center">
-                <label>Public Profile</label>
-                <Switch 
-                  checked={settings.privacy.publicProfile}
-                  onCheckedChange={() => handleSettingChange('privacy', 'publicProfile')}
-                />
-              </div>
-              <div className="flex justify-between items-center">
-                <label>Show Event Attendance</label>
-                <Switch 
-                  checked={settings.privacy.showAttendance}
-                  onCheckedChange={() => handleSettingChange('privacy', 'showAttendance')}
-                />
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="account">
-          <Card>
-            <CardHeader>
-              <CardTitle>Account Settings</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <p className="text-sm text-muted-foreground">
-                  Logged in as: {session?.user?.email}
-                </p>
-                <Button variant="outline" className="w-full">
-                  Change Password
-                </Button>
-                <Button variant="destructive" className="w-full">
-                  Delete Account
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+        <motion.div 
+          className="mt-8 text-center"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.4 }}
+        >
+          <Button className="bg-white text-purple-600 hover:bg-gray-100 px-6 py-2 rounded-full transition duration-300 text-sm">
+            <Zap className="w-4 h-4 mr-2" />
+            Save All Changes
+          </Button>
+        </motion.div>
+      </motion.div>
     </div>
   );
 }

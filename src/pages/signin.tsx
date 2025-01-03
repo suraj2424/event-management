@@ -16,10 +16,9 @@ import {
 import { Input } from '@/components/ui/input';
 import { toast } from 'react-hot-toast';
 import Link from 'next/link';
-import { motion } from 'framer-motion';
-import { Lock, Mail } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Lock, Mail, Sparkles, ArrowRight } from 'lucide-react';
 
-// Form schema validation
 const formSchema = z.object({
   email: z.string().email({
     message: "Please enter a valid email address.",
@@ -34,7 +33,6 @@ export default function ModernSignInPage() {
   const { data: session, status } = useSession();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Form initialization
   const form = useForm({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -43,7 +41,6 @@ export default function ModernSignInPage() {
     },
   });
 
-  // Submit handler
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsSubmitting(true);
     try {
@@ -57,7 +54,7 @@ export default function ModernSignInPage() {
       if (result?.error) {
         toast.error(result.error);
       } else {
-        toast.success("Logged in successfully!");
+        toast.success("Welcome back!");
         router.push("/");
       }
     } catch (error) {
@@ -67,25 +64,25 @@ export default function ModernSignInPage() {
     }
   }
 
-  // Loading spinner component
-  const LoadingSpinner = () => (
-    <motion.div 
-      className="flex justify-center items-center h-screen"
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ duration: 0.5 }}
-    >
-      <motion.div 
-        className="w-16 h-16 border-4 border-blue-500 border-solid rounded-full animate-spin border-t-transparent"
-        animate={{ rotate: 360 }}
-        transition={{ repeat: Infinity, duration: 1 }}
-      />
-    </motion.div>
-  );
-
-  // Redirect if already logged in or loading
   if (status === "loading") {
-    return <LoadingSpinner />;
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-50 to-purple-50">
+        <motion.div
+          animate={{
+            scale: [1, 1.2, 1],
+            rotate: [0, 180, 360],
+          }}
+          transition={{
+            duration: 2,
+            repeat: Infinity,
+            ease: "linear",
+          }}
+          className="w-12 h-12"
+        >
+          <Sparkles className="w-full h-full text-indigo-500" />
+        </motion.div>
+      </div>
+    );
   }
 
   if (session) {
@@ -94,118 +91,117 @@ export default function ModernSignInPage() {
   }
 
   return (
-    <motion.div 
-      className="flex flex-col items-center justify-center min-h-screen py-12 bg-gradient-to-br from-gray-50 to-blue-50 sm:px-6 lg:px-8"
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ duration: 0.5 }}
-    >
-      <motion.div 
-        className="w-full max-w-md bg-white shadow-2xl rounded-2xl p-8"
-        initial={{ scale: 0.9, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        transition={{ type: "spring", stiffness: 300, damping: 20 }}
-      >
-        <div className="text-center relative mb-8">
-          <motion.h2 
-            className="text-4xl font-bold text-gray-900 mb-2"
-            initial={{ y: -20, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ delay: 0.2 }}
-          >
-            Welcome Back
-          </motion.h2>
-          <p className="text-sm text-gray-600">Sign in to continue to your account</p>
-        </div>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            <FormField
-              control={form.control}
-              name="email"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="flex items-center">
-                    <Mail className="mr-2 text-blue-500" size={20} />
-                    Email
-                  </FormLabel>
-                  <FormControl>
-                    <motion.div
-                      initial={{ x: -20, opacity: 0 }}
-                      animate={{ x: 0, opacity: 1 }}
-                      transition={{ delay: 0.3 }}
-                    >
-                      <Input 
-                        placeholder="Enter your email" 
-                        {...field} 
-                        className="transition-all duration-300 focus:ring-2 focus:ring-blue-500"
-                      />
-                    </motion.div>
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="password"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="flex items-center">
-                    <Lock className="mr-2 text-blue-500" size={20} />
-                    Password
-                  </FormLabel>
-                  <FormControl>
-                    <motion.div
-                      initial={{ x: -20, opacity: 0 }}
-                      animate={{ x: 0, opacity: 1 }}
-                      transition={{ delay: 0.4 }}
-                    >
-                      <Input 
-                        type="password" 
-                        placeholder="Enter your password" 
-                        {...field} 
-                        className="transition-all duration-300 focus:ring-2 focus:ring-blue-500"
-                      />
-                    </motion.div>
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.5 }}
-            >
-              <Button 
-                type="submit" 
-                className="w-full bg-blue-600 hover:bg-blue-700 transition-colors duration-300" 
-                disabled={isSubmitting}
-              >
-                {isSubmitting ? (
-                  <div className="w-5 h-5 border-2 border-white border-solid rounded-full animate-spin border-t-transparent" />
-                ) : (
-                  "Sign In"
-                )}
-              </Button>
-            </motion.div>
-          </form>
-        </Form>
-        <motion.p 
-          className="mt-6 text-center text-sm text-gray-600"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.6 }}
+    <div className="min-h-screen relative overflow-hidden bg-white">
+      {/* Background decoration */}
+      <div className="absolute inset-0 bg-gradient-to-br from-indigo-50 to-purple-50" />
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[1000px] h-[1000px] bg-gradient-to-br from-indigo-100/20 to-purple-100/20 rounded-full blur-3xl" />
+
+      <div className="relative min-h-screen flex flex-col items-center justify-center px-4">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="w-full max-w-md"
         >
-          Don&apos;t have an account?{" "}
-          <Link 
-            href="/signup" 
-            className="font-medium text-blue-600 hover:text-blue-500 transition-colors duration-300"
+          {/* Logo/Brand */}
+          <div className="text-center mb-8">
+            <motion.div
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              transition={{ type: "spring", stiffness: 300, damping: 20 }}
+              className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gradient-to-br from-indigo-500 to-purple-500 mb-4"
+            >
+              <Sparkles className="w-8 h-8 text-white" />
+            </motion.div>
+            <h2 className="text-2xl font-bold text-slate-900">Welcome back to Evenzia</h2>
+            <p className="mt-2 text-slate-600">Sign in to continue to your account</p>
+          </div>
+
+          {/* Form Card */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            className="bg-white/80 backdrop-blur-xl rounded-2xl shadow-xl p-8 border border-slate-100"
           >
-            Sign up here
-          </Link>
-        </motion.p>
-      </motion.div>
-    </motion.div>
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                <FormField
+                  control={form.control}
+                  name="email"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="flex items-center text-slate-700">
+                        <Mail className="mr-2 h-4 w-4 text-indigo-500" />
+                        Email
+                      </FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="Enter your email"
+                          className="bg-white/50"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="password"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="flex items-center text-slate-700">
+                        <Lock className="mr-2 h-4 w-4 text-indigo-500" />
+                        Password
+                      </FormLabel>
+                      <FormControl>
+                        <Input
+                          type="password"
+                          placeholder="Enter your password"
+                          className="bg-white/50"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <Button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="w-full bg-gradient-to-r from-indigo-500 to-purple-500 hover:opacity-90 transition-opacity"
+                >
+                  {isSubmitting ? (
+                    <motion.div
+                      animate={{ rotate: 360 }}
+                      transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                      className="w-5 h-5 border-2 border-white border-t-transparent rounded-full"
+                    />
+                  ) : (
+                    <span className="flex items-center justify-center">
+                      Sign In
+                      <ArrowRight className="ml-2 h-4 w-4" />
+                    </span>
+                  )}
+                </Button>
+              </form>
+            </Form>
+
+            <div className="mt-6 text-center">
+              <p className="text-sm text-slate-600">
+                Don't have an account?{" "}
+                <Link
+                  href="/signup"
+                  className="font-medium text-indigo-500 hover:text-indigo-600 transition-colors"
+                >
+                  Sign up here
+                </Link>
+              </p>
+            </div>
+          </motion.div>
+        </motion.div>
+      </div>
+    </div>
   );
 }
