@@ -4,9 +4,6 @@ import { getSession } from 'next-auth/react';
 import { useState } from 'react';
 import { 
   Bell, 
-  Sun, 
-  Shield, 
-  User,
   Zap,
   Palette,
   Lock,
@@ -16,7 +13,6 @@ import { motion } from 'framer-motion';
 import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
 import { toast } from 'react-hot-toast';
-import SettingsPanel from '@/components/settings/SettingsPanel';
 
 type SettingsPageProps = {
   userEmail: string | null;

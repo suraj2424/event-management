@@ -101,22 +101,8 @@ export const getServerSideProps: GetServerSideProps<PageProps> = async ({ query 
       queryParams.append('search', searchTerm);
     }
 
-    // Determine API URL based on environment
-    const getApiUrl = () => {
-      if (process.env.NODE_ENV === 'development') {
-        return process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
-      }
-      return process.env.NEXT_PUBLIC_API_URL || process.env.API_URL;
-    };
-
-    const apiUrl = getApiUrl();
-    
-    if (!apiUrl) {
-      throw new Error('API URL is not configured');
-    }
-
     const response = await fetch(
-      `${apiUrl}/api/events?${queryParams.toString()}`,
+      `/api/events?${queryParams.toString()}`,
       { 
         headers: {
           'Content-Type': 'application/json',

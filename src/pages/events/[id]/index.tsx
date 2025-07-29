@@ -71,12 +71,8 @@ interface EventPageProps {
 
 // Server function to fetch event data
 async function fetchEventData(eventId: string): Promise<Event | null> {
-  const baseUrl =
-    process.env.NEXT_PUBLIC_API_URL ||
-    process.env.API_URL ||
-    `http://localhost:${process.env.PORT || 3000}`;
 
-  const response = await fetch(`${baseUrl}/api/events/${eventId}`, {
+  const response = await fetch(`/api/events/${eventId}`, {
     headers: {
       "Content-Type": "application/json",
       "Cache-Control": "no-cache",
@@ -95,12 +91,8 @@ async function fetchEventData(eventId: string): Promise<Event | null> {
 
 // Server function to fetch event details
 async function fetchEventDetails(eventId: string): Promise<EventDetails | null> {
-  const baseUrl =
-    process.env.NEXT_PUBLIC_API_URL ||
-    process.env.API_URL ||
-    `http://localhost:${process.env.PORT || 3000}`;
 
-  const response = await fetch(`${baseUrl}/api/events/${eventId}/details`, {
+  const response = await fetch(`/api/events/${eventId}/details`, {
     headers: {
       "Content-Type": "application/json",
       "Cache-Control": "no-cache",
@@ -119,13 +111,8 @@ async function fetchEventDetails(eventId: string): Promise<EventDetails | null> 
 
 // Server function to fetch attendance data
 async function fetchAttendanceData(eventId: string, cookie: string): Promise<Attendance | null> {
-  const baseUrl =
-    process.env.NEXT_PUBLIC_API_URL ||
-    process.env.API_URL ||
-    `http://localhost:${process.env.PORT || 3000}`;
-
   try {
-    const response = await fetch(`${baseUrl}/api/events/${eventId}/attendance`, {
+    const response = await fetch(`/api/events/${eventId}/attendance`, {
       headers: {
         "Content-Type": "application/json",
         "Cache-Control": "no-cache",

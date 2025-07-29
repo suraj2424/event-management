@@ -8,17 +8,8 @@ import {
   CardContent,
   CardHeader,
   CardTitle,
-  CardDescription,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -30,12 +21,11 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
-import { DropdownMenu, DropdownMenuTrigger, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu";
-import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { signOut } from 'next-auth/react';
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu";
+
 import { Input } from "@/components/ui/input";
 
-import { Plus,Search, Edit, Trash2, Home, Calendar, MapPin, Users, Clock, Sparkles, ArrowRight, Filter } from "lucide-react";
+import { Plus,Search, Edit, Trash2, Home, Calendar, MapPin, Users, Sparkles, ArrowRight, Filter } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "react-hot-toast";
 

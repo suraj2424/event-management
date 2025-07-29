@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from "react";
-import { useSession } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   Select,
   SelectContent,
@@ -44,7 +43,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { format } from "date-fns";
-import { CustomSession, EventStatus } from "../event-form/types/event";
+import {  EventStatus } from "../event-form/types/event";
 
 interface Event {
   id: string;
@@ -60,7 +59,7 @@ interface Event {
 }
 
 export function EventsManagement() {
-  const { data: session } = useSession() as { data: CustomSession | null };
+  // const { data: session } = useSession() as { data: CustomSession | null };
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
