@@ -1,6 +1,7 @@
 // pages/settings/index.tsx
+import { GetServerSideProps } from 'next';
+import { getSession } from 'next-auth/react';
 import { useState } from 'react';
-import { useSession } from 'next-auth/react';
 import { 
   Bell, 
   Sun, 
@@ -15,26 +16,14 @@ import { motion } from 'framer-motion';
 import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
 import { toast } from 'react-hot-toast';
+import SettingsPanel from '@/components/settings/SettingsPanel';
 
-export default function SettingsPage() {
-  const { data: session } = useSession();
-  type Settings = {
-    notifications: {
-      email: boolean;
-      push: boolean;
-      eventReminders: boolean;
-    };
-    appearance: {
-      darkMode: boolean;
-      compactView: boolean;
-    };
-    privacy: {
-      publicProfile: boolean;
-      showAttendance: boolean;
-    };
-  };
+type SettingsPageProps = {
+  userEmail: string | null;
+};
 
-  const [settings, setSettings] = useState<Settings>({
+export default function SettingsPage({ userEmail }: SettingsPageProps) {
+  const [settings, setSettings] = useState({
     notifications: {
       email: true,
       push: true,
@@ -50,9 +39,9 @@ export default function SettingsPage() {
     }
   });
 
-  const handleSettingChange = <T extends keyof Settings>(
+  const handleSettingChange = <T extends keyof typeof settings>(
     category: T,
-    setting: keyof Settings[T]
+    setting: keyof typeof settings[T]
   ) => {
     setSettings(prev => ({
       ...prev,
@@ -126,8 +115,8 @@ export default function SettingsPage() {
                   <div key={setting.key} className="flex justify-between items-center">
                     <label className="text-sm text-gray-700">{setting.label}</label>
                     <Switch 
-                      checked={settings[section.title.toLowerCase() as keyof Settings][setting.key as keyof Settings[keyof Settings]]}
-                      onCheckedChange={() => handleSettingChange(section.title.toLowerCase() as keyof Settings, setting.key as keyof Settings[keyof Settings])}
+                      checked={settings[section.title.toLowerCase() as keyof typeof settings][setting.key as keyof typeof settings[keyof typeof settings]]}
+                      onCheckedChange={() => handleSettingChange(section.title.toLowerCase() as keyof typeof settings, setting.key as keyof typeof settings[keyof typeof settings])}
                     />
                   </div>
                 ))}
@@ -147,7 +136,7 @@ export default function SettingsPage() {
             </div>
             <div className="p-4 space-y-3">
               <p className="text-xs text-gray-600">
-                Logged in as: {session?.user?.email}
+                Logged in as: {userEmail}
               </p>
               <Button variant="outline" className="w-full text-sm">
                 Change Password
@@ -174,3 +163,22 @@ export default function SettingsPage() {
     </div>
   );
 }
+
+export const getServerSideProps: GetServerSideProps = async (context) => {
+  const session = await getSession(context);
+
+  if (!session) {
+    return {
+      redirect: {
+        destination: '/auth/signin',
+        permanent: false,
+      },
+    };
+  }
+
+  return {
+    props: {
+      userEmail: session.user?.email || null,
+    },
+  };
+};

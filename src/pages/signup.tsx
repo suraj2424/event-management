@@ -14,12 +14,31 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+import { Separator } from '@/components/ui/separator';
+import { Badge } from '@/components/ui/badge';
 import { toast } from 'react-hot-toast';
 import Link from 'next/link';
-import { motion } from 'framer-motion';
-import { User, Mail, Lock, CheckCircle, Sparkles, ArrowRight } from 'lucide-react';
+import { 
+  User,
+  Mail, 
+  Lock, 
+  Calendar, 
+  Loader2, 
+  ArrowRight, 
+  ArrowLeft,
+  UserCheck,
+  Crown,
+  Ticket,
+  CheckCircle
+} from 'lucide-react';
 
-// Form schema validation
 const formSchema = z.object({
   name: z.string().min(2, {
     message: "Name must be at least 2 characters.",
@@ -40,13 +59,52 @@ const formSchema = z.object({
   path: ["confirmPassword"],
 });
 
-export default function ModernSignUpPage() {
+type FormValues = z.infer<typeof formSchema>;
+type UserRole = 'ORGANIZER' | 'ATTENDEE';
+
+interface RoleOption {
+  value: UserRole;
+  title: string;
+  description: string;
+  icon: React.ComponentType<{ className?: string }>;
+  features: string[];
+}
+
+const roleOptions: RoleOption[] = [
+  {
+    value: 'ORGANIZER',
+    title: 'Event Organizer',
+    description: 'Create and manage events',
+    icon: Crown,
+    features: [
+      'Create unlimited events',
+      'Manage attendees',
+      'Analytics & insights',
+      'Custom branding'
+    ]
+  },
+  {
+    value: 'ATTENDEE',
+    title: 'Event Attendee',
+    description: 'Discover and join events',
+    icon: Ticket,
+    features: [
+      'Browse events',
+      'RSVP to events',
+      'Get notifications',
+      'Connect with others'
+    ]
+  }
+];
+
+export default function SignUpPage() {
   const router = useRouter();
   const { data: session, status } = useSession();
+  const [currentStep, setCurrentStep] = useState<'role-selection' | 'sign-up'>('role-selection');
+  const [selectedRole, setSelectedRole] = useState<UserRole | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Form initialization
-  const form = useForm({
+  const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: "",
@@ -56,8 +114,12 @@ export default function ModernSignUpPage() {
     },
   });
 
-  // Submit handler
-  async function onSubmit(values: z.infer<typeof formSchema>) {
+  async function onSubmit(values: FormValues) {
+    if (!selectedRole) {
+      toast.error("Please select a user type first");
+      return;
+    }
+
     setIsSubmitting(true);
     try {
       const response = await fetch("/api/auth/signup", {
@@ -67,12 +129,13 @@ export default function ModernSignUpPage() {
           name: values.name,
           email: values.email,
           password: values.password,
-          role: "ATTENDEE"
+          role: selectedRole
         }),
       });
 
       if (response.ok) {
-        toast.success("Account created successfully!");
+        const roleMessage = selectedRole === 'ORGANIZER' ? 'organizer' : 'attendee';
+        toast.success(`Account created successfully as ${roleMessage}!`);
         router.push("/signin");
       } else {
         const data = await response.json();
@@ -85,25 +148,25 @@ export default function ModernSignUpPage() {
     }
   }
 
-  // Loading spinner component
-  const LoadingSpinner = () => (
-    <motion.div 
-      className="flex justify-center items-center h-screen"
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ duration: 0.5 }}
-    >
-      <motion.div 
-        className="w-16 h-16 border-4 border-blue-500 border-solid rounded-full animate-spin border-t-transparent"
-        animate={{ rotate: 360 }}
-        transition={{ repeat: Infinity, duration: 1 }}
-      />
-    </motion.div>
-  );
+  function handleRoleSelect(role: UserRole) {
+    setSelectedRole(role);
+    setCurrentStep('sign-up');
+  }
 
-  // Redirect if already logged in or loading
+  function handleBackToRoleSelection() {
+    setCurrentStep('role-selection');
+    form.reset();
+  }
+
   if (status === "loading") {
-    return <LoadingSpinner />;
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="flex flex-col items-center space-y-4">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <p className="text-muted-foreground">Loading...</p>
+        </div>
+      </div>
+    );
   }
 
   if (session) {
@@ -112,106 +175,193 @@ export default function ModernSignUpPage() {
   }
 
   return (
-    <div className="min-h-screen relative overflow-hidden bg-white">
-      {/* Background decoration */}
-      <div className="absolute inset-0 bg-gradient-to-br from-indigo-50 to-purple-50" />
-      <div className="absolute inset-0">
-        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-indigo-200 rounded-full mix-blend-multiply filter blur-xl opacity-50 animate-blob" />
-        <div className="absolute top-1/3 right-1/4 w-96 h-96 bg-purple-200 rounded-full mix-blend-multiply filter blur-xl opacity-50 animate-blob animation-delay-2000" />
-        <div className="absolute bottom-1/4 left-1/3 w-96 h-96 bg-pink-200 rounded-full mix-blend-multiply filter blur-xl opacity-50 animate-blob animation-delay-4000" />
-      </div>
-
-      <div className="relative min-h-screen flex flex-col items-center justify-center px-4 py-12">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="w-full max-w-lg"
-        >
-          {/* Logo/Brand */}
-          <div className="text-center mb-8">
-            <motion.div
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              transition={{ type: "spring", stiffness: 300, damping: 20 }}
-              className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gradient-to-br from-indigo-500 to-purple-500 mb-4"
-            >
-              <Sparkles className="w-8 h-8 text-white" />
-            </motion.div>
-            <h2 className="text-2xl font-bold text-slate-900">Join Evenzia</h2>
-            <p className="mt-2 text-slate-600">Create your account to get started</p>
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-muted/20 p-4">
+      <div className="w-full max-w-lg space-y-6">
+        {/* Header */}
+        <div className="text-center space-y-4">
+          <div className="mx-auto w-16 h-16 bg-primary rounded-2xl flex items-center justify-center">
+            <Calendar className="h-8 w-8 text-primary-foreground" />
           </div>
+          <div className="space-y-2">
+            <h1 className="text-3xl font-bold tracking-tight">Evenzia</h1>
+            <p className="text-muted-foreground">
+              Event Management Platform
+            </p>
+          </div>
+        </div>
 
-          {/* Form Card */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-            className="bg-white/80 backdrop-blur-xl rounded-2xl shadow-xl p-8 border border-slate-100"
-          >
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-                {/* Name Field */}
-                <FormField
-                  control={form.control}
-                  name="name"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="flex items-center text-slate-700">
-                        <User className="mr-2 h-4 w-4 text-indigo-500" />
-                        Full Name
-                      </FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder="Enter your full name"
-                          className="bg-white/50"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+        {/* Role Selection Screen */}
+        {currentStep === 'role-selection' && (
+          <Card className="border-border/50 shadow-lg">
+            <CardHeader className="space-y-2 text-center">
+              <CardTitle className="text-2xl">Choose Your Role</CardTitle>
+              <CardDescription>
+                Select how you'd like to use Evenzia
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {roleOptions.map((option) => {
+                  const IconComponent = option.icon;
+                  return (
+                    <Card
+                      key={option.value}
+                      className="cursor-pointer transition-all hover:shadow-md hover:border-primary/50 border-2 h-full"
+                      onClick={() => handleRoleSelect(option.value)}
+                    >
+                      <CardContent className="p-6 h-full">
+                        <div className="flex flex-col items-center text-center space-y-4 h-full">
+                          <div className="flex-shrink-0">
+                            <div className="w-16 h-16 bg-primary/10 rounded-lg flex items-center justify-center">
+                              <IconComponent className="h-8 w-8 text-primary" />
+                            </div>
+                          </div>
+                          <div className="flex-1 space-y-3">
+                            <div className="space-y-2">
+                              <h3 className="font-semibold text-lg">{option.title}</h3>
+                              <Badge variant="secondary" className="text-xs">
+                                {option.value.toLowerCase()}
+                              </Badge>
+                            </div>
+                            <p className="text-muted-foreground text-sm">
+                              {option.description}
+                            </p>
+                            <ul className="space-y-2">
+                              {option.features.map((feature, index) => (
+                                <li key={index} className="flex items-center justify-center text-xs text-muted-foreground">
+                                  <UserCheck className="h-3 w-3 mr-2 text-primary flex-shrink-0" />
+                                  <span className="text-center">{feature}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                          <ArrowRight className="h-5 w-5 text-muted-foreground mt-auto" />
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
+              
+              <Separator className="my-6" />
+              
+              <div className="text-center">
+                <p className="text-sm text-muted-foreground">
+                  Already have an account?{" "}
+                  <Link
+                    href="/signin"
+                    className="font-medium text-primary hover:underline"
+                  >
+                    Sign in here
+                  </Link>
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
-                {/* Email Field */}
-                <FormField
-                  control={form.control}
-                  name="email"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="flex items-center text-slate-700">
-                        <Mail className="mr-2 h-4 w-4 text-indigo-500" />
-                        Email
-                      </FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder="Enter your email"
-                          className="bg-white/50"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+        {/* Sign Up Form */}
+        {currentStep === 'sign-up' && selectedRole && (
+          <Card className="border-border/50 shadow-lg">
+            <CardHeader className="space-y-2">
+              <div className="flex items-center space-x-2">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleBackToRoleSelection}
+                  className="p-1 h-8 w-8"
+                >
+                  <ArrowLeft className="h-4 w-4" />
+                </Button>
+                <div className="flex-1 text-center">
+                  <CardTitle className="text-2xl">Create Account</CardTitle>
+                  <CardDescription className="flex items-center justify-center space-x-2">
+                    <span>Signing up as</span>
+                    <Badge variant="outline" className="text-xs">
+                      {selectedRole === 'ORGANIZER' ? (
+                        <>
+                          <Crown className="h-3 w-3 mr-1" />
+                          Organizer
+                        </>
+                      ) : (
+                        <>
+                          <Ticket className="h-3 w-3 mr-1" />
+                          Attendee
+                        </>
+                      )}
+                    </Badge>
+                  </CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <Form {...form}>
+                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                  <FormField
+                    control={form.control}
+                    name="name"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-sm font-medium">
+                          Full Name
+                        </FormLabel>
+                        <FormControl>
+                          <div className="relative">
+                            <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                            <Input
+                              placeholder="Enter your full name"
+                              className="pl-10"
+                              {...field}
+                            />
+                          </div>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
 
-                {/* Password Fields */}
-                <div className="space-y-4">
+                  <FormField
+                    control={form.control}
+                    name="email"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-sm font-medium">
+                          Email address
+                        </FormLabel>
+                        <FormControl>
+                          <div className="relative">
+                            <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                            <Input
+                              type="email"
+                              placeholder="Enter your email"
+                              className="pl-10"
+                              {...field}
+                            />
+                          </div>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
                   <FormField
                     control={form.control}
                     name="password"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="flex items-center text-slate-700">
-                          <Lock className="mr-2 h-4 w-4 text-indigo-500" />
+                        <FormLabel className="text-sm font-medium">
                           Password
                         </FormLabel>
                         <FormControl>
-                          <Input
-                            type="password"
-                            placeholder="Create a strong password"
-                            className="bg-white/50"
-                            {...field}
-                          />
+                          <div className="relative">
+                            <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                            <Input
+                              type="password"
+                              placeholder="Create a strong password"
+                              className="pl-10"
+                              {...field}
+                            />
+                          </div>
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -223,60 +373,78 @@ export default function ModernSignUpPage() {
                     name="confirmPassword"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="flex items-center text-slate-700">
-                          <CheckCircle className="mr-2 h-4 w-4 text-indigo-500" />
+                        <FormLabel className="text-sm font-medium">
                           Confirm Password
                         </FormLabel>
                         <FormControl>
-                          <Input
-                            type="password"
-                            placeholder="Confirm your password"
-                            className="bg-white/50"
-                            {...field}
-                          />
+                          <div className="relative">
+                            <CheckCircle className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                            <Input
+                              type="password"
+                              placeholder="Confirm your password"
+                              className="pl-10"
+                              {...field}
+                            />
+                          </div>
                         </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
+
+                  <Button
+                    type="submit"
+                    disabled={isSubmitting}
+                    className="w-full h-11"
+                    size="lg"
+                  >
+                    {isSubmitting ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Creating account...
+                      </>
+                    ) : (
+                      <>
+                        Create {selectedRole === 'ORGANIZER' ? 'Organizer' : 'Attendee'} Account
+                        <ArrowRight className="ml-2 h-4 w-4" />
+                      </>
+                    )}
+                  </Button>
+                </form>
+              </Form>
+
+              <div className="space-y-4">
+                <Separator />
+                
+                <div className="text-center">
+                  <p className="text-sm text-muted-foreground">
+                    Already have an account?{" "}
+                    <Link
+                      href="/signin"
+                      className="font-medium text-primary hover:underline"
+                    >
+                      Sign in here
+                    </Link>
+                  </p>
                 </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
-                {/* Submit Button */}
-                <Button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="w-full bg-gradient-to-r from-indigo-500 to-purple-500 hover:opacity-90 transition-opacity"
-                >
-                  {isSubmitting ? (
-                    <motion.div
-                      animate={{ rotate: 360 }}
-                      transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                      className="w-5 h-5 border-2 border-white border-t-transparent rounded-full"
-                    />
-                  ) : (
-                    <span className="flex items-center justify-center">
-                      Create Account
-                      <ArrowRight className="ml-2 h-4 w-4" />
-                    </span>
-                  )}
-                </Button>
-              </form>
-            </Form>
-
-            {/* Sign In Link */}
-            <div className="mt-6 text-center">
-              <p className="text-sm text-slate-600">
-                Already have an account?{" "}
-                <Link
-                  href="/signin"
-                  className="font-medium text-indigo-500 hover:text-indigo-600 transition-colors"
-                >
-                  Sign in here
-                </Link>
-              </p>
-            </div>
-          </motion.div>
-        </motion.div>
+        {/* Footer */}
+        <div className="text-center">
+          <p className="text-xs text-muted-foreground">
+            By creating an account, you agree to our{" "}
+            <Link href="/terms" className="underline hover:text-foreground">
+              Terms of Service
+            </Link>{" "}
+            and{" "}
+            <Link href="/privacy" className="underline hover:text-foreground">
+              Privacy Policy
+            </Link>
+          </p>
+        </div>
       </div>
     </div>
   );

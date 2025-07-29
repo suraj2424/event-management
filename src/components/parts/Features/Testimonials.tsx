@@ -1,121 +1,200 @@
+// components/parts/Features/Testimonials.tsx
 import React, { forwardRef } from 'react';
 import { Star, Quote } from 'lucide-react';
-import Image from 'next/image';
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 const Testimonials = forwardRef<HTMLDivElement>((props, ref) => {
   const testimonials = [
     {
       name: "Emily Johnson",
       role: "Event Planner",
-      quote: "Evenzia has revolutionized how I handle events. The registration process is incredibly smooth, and the analytics tools provide invaluable insights.",
-      avatar: "/avatars/emily.jpg", // Add actual avatar images
+      quote: "Evenzia has revolutionized how I handle events. The registration process is incredibly smooth, and the analytics tools provide invaluable insights that help me improve every event.",
+      avatar: "/avatars/emily.jpg",
+      initials: "EJ",
       rating: 5,
-      gradient: "from-pink-500 to-rose-500",
     },
     {
       name: "Michael Torres",
       role: "Conference Organizer",
-      quote: "The advanced features offered by Evenzia allowed us to scale our annual conference effortlessly. Attendee feedback was overwhelmingly positive.",
+      quote: "The advanced features offered by Evenzia allowed us to scale our annual conference effortlessly. Attendee feedback was overwhelmingly positive and management was seamless.",
       avatar: "/avatars/michael.jpg",
+      initials: "MT",
       rating: 5,
-      gradient: "from-indigo-500 to-blue-500",
     },
     {
       name: "Sarah Lee",
-      role: "Attendee",
-      quote: "I was amazed at how easy it was to find and register for events that matched my interests. The user-friendly interface made everything straightforward!",
+      role: "Marketing Director",
+      quote: "I was amazed at how easy it was to find and register for events that matched my interests. The user-friendly interface made everything straightforward and enjoyable.",
       avatar: "/avatars/sarah.jpg",
+      initials: "SL",
       rating: 5,
-      gradient: "from-violet-500 to-purple-500",
     },
   ];
+
+  const StarRating = ({ rating }: { rating: number }) => (
+    <div className="flex gap-1 mb-4">
+      {[...Array(5)].map((_, i) => (
+        <Star
+          key={i}
+          className={`w-4 h-4 ${
+            i < rating 
+              ? 'fill-foreground text-foreground' 
+              : 'fill-muted text-muted'
+          }`}
+        />
+      ))}
+    </div>
+  );
 
   return (
     <section 
       ref={ref}
-      className="py-24 px-4 relative overflow-hidden"
+      className="py-24 px-4 bg-background"
     >
-      {/* Background decorations */}
-      <div className="absolute inset-0 bg-slate-50/50" />
-      <div className="absolute inset-y-0 right-0 w-1/3 bg-gradient-to-l from-white to-transparent" />
-      <div className="absolute inset-y-0 left-0 w-1/3 bg-gradient-to-r from-white to-transparent" />
-
-      <div className="relative max-w-6xl mx-auto">
+      <div className="container max-w-6xl mx-auto">
         {/* Section header */}
-        <div className="text-center mb-20">
-          <h2 className="text-sm font-semibold text-indigo-500 tracking-wide uppercase mb-3">
+        <div className="text-center mb-16 section-header">
+          <Badge variant="secondary" className="mb-4">
             Testimonials
-          </h2>
-          <h3 className="text-4xl md:text-5xl font-bold text-slate-900 mb-4">
+          </Badge>
+          
+          <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-foreground mb-4 tracking-tight">
             Loved by{' '}
-            <span className="bg-clip-text text-transparent bg-gradient-to-r from-indigo-500 to-purple-500">
+            <span className="text-muted-foreground">
               Event Professionals
             </span>
-          </h3>
-          <p className="max-w-2xl mx-auto text-lg text-slate-600">
+          </h2>
+          
+          <p className="max-w-2xl mx-auto text-lg text-muted-foreground leading-relaxed">
             See what our users have to say about their experience with Evenzia
           </p>
         </div>
 
         {/* Testimonials grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 testimonials-grid">
           {testimonials.map((testimonial, index) => (
-            <div
+            <Card
               key={index}
-              data-aos="fade-up"
-              data-aos-delay={index * 100}
-              className="group relative"
+              className="group h-full border-0 bg-muted/20 hover:bg-muted/30 transition-all duration-500 hover:shadow-lg testimonial-card"
+              style={{ animationDelay: `${index * 150}ms` }}
             >
-              {/* Card */}
-              <div className="relative p-8 bg-white rounded-2xl shadow-xl">
-                {/* Gradient border effect */}
-                <div className={`absolute inset-0 bg-gradient-to-r ${testimonial.gradient} opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-2xl blur`} />
+              <CardContent className="p-6 h-full flex flex-col">
+                {/* Quote icon */}
+                <div className="flex justify-between items-start mb-4">
+                  <Quote className="w-8 h-8 text-muted-foreground/40" />
+                  <StarRating rating={testimonial.rating} />
+                </div>
 
-                {/* Content */}
-                <div className="relative z-10">
-                  {/* Quote icon */}
-                  <Quote className="w-10 h-10 text-slate-200 mb-6" />
+                {/* Quote */}
+                <blockquote className="text-foreground/90 mb-6 leading-relaxed text-sm flex-grow">
+                  &quot;{testimonial.quote}&quot;
+                </blockquote>
 
-                  {/* Rating */}
-                  <div className="flex space-x-1 mb-6">
-                    {[...Array(testimonial.rating)].map((_, i) => (
-                      <Star
-                        key={i}
-                        className={`w-5 h-5 fill-current bg-clip-text text-transparent bg-gradient-to-r ${testimonial.gradient}`}
-                      />
-                    ))}
-                  </div>
-
-                  {/* Quote */}
-                  <blockquote className="text-slate-700 mb-6 leading-relaxed">
-                    "{testimonial.quote}"
-                  </blockquote>
-
-                  {/* Author */}
-                  <div className="flex items-center">
-                    <div className="relative w-12 h-12 rounded-full overflow-hidden mr-4">
-                      <Image
-                        src={testimonial.avatar}
-                        alt={testimonial.name}
-                        fill
-                        className="object-cover"
-                      />
+                {/* Author */}
+                <div className="flex items-center mt-auto">
+                  <Avatar className="w-12 h-12 mr-4">
+                    <AvatarImage 
+                      src={testimonial.avatar} 
+                      alt={testimonial.name}
+                    />
+                    <AvatarFallback className="bg-muted text-muted-foreground font-medium">
+                      {testimonial.initials}
+                    </AvatarFallback>
+                  </Avatar>
+                  
+                  <div>
+                    <div className="font-semibold text-foreground text-sm">
+                      {testimonial.name}
                     </div>
-                    <div>
-                      <div className="font-semibold text-slate-900">
-                        {testimonial.name}
-                      </div>
-                      <div className="text-sm text-slate-500">
-                        {testimonial.role}
-                      </div>
+                    <div className="text-xs text-muted-foreground">
+                      {testimonial.role}
                     </div>
                   </div>
                 </div>
-              </div>
-            </div>
+              </CardContent>
+            </Card>
           ))}
         </div>
+
+        {/* Trust indicators */}
+        <div className="mt-16 text-center trust-indicators">
+          <div className="flex flex-wrap justify-center items-center gap-8 opacity-60">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Star className="w-4 h-4 fill-foreground text-foreground" />
+              <span className="font-medium">4.9/5</span>
+              <span>Average rating</span>
+            </div>
+            <div className="h-4 w-px bg-border" />
+            <div className="text-sm text-muted-foreground">
+              <span className="font-medium">500+</span> Reviews
+            </div>
+            <div className="h-4 w-px bg-border" />
+            <div className="text-sm text-muted-foreground">
+              <span className="font-medium">10K+</span> Happy users
+            </div>
+          </div>
+        </div>
+
+        {/* Bottom accent */}
+        <div className="mt-12 text-center">
+          <div className="inline-flex items-center gap-2 text-sm text-muted-foreground">
+            <div className="w-12 h-px bg-muted" />
+            <span>Trusted by professionals worldwide</span>
+            <div className="w-12 h-px bg-muted" />
+          </div>
+        </div>
       </div>
+
+      <style jsx>{`
+        @keyframes fadeInUp {
+          from {
+            opacity: 0;
+            transform: translateY(32px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+
+        @keyframes slideInCard {
+          from {
+            opacity: 0;
+            transform: translateY(24px) scale(0.95);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+          }
+        }
+
+        @keyframes fadeIn {
+          from {
+            opacity: 0;
+          }
+          to {
+            opacity: 1;
+          }
+        }
+
+        .section-header {
+          animation: fadeInUp 0.8s ease-out;
+        }
+
+        .testimonials-grid {
+          animation: fadeInUp 0.8s ease-out 0.3s both;
+        }
+
+        .testimonial-card {
+          animation: slideInCard 0.6s ease-out both;
+        }
+
+        .trust-indicators {
+          animation: fadeIn 1s ease-out 1.2s both;
+        }
+      `}</style>
     </section>
   );
 });

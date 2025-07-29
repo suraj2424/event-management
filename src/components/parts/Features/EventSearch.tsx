@@ -1,160 +1,270 @@
+// components/parts/Features/EventSearch.tsx
 import React, { useState } from 'react';
-import { Search, MapPin, Calendar, ChevronDown } from 'lucide-react';
-import { cn } from "@/lib/utils";
+import { Search, MapPin, Calendar, Filter } from 'lucide-react';
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 const EventSearch = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [category, setCategory] = useState('');
   const [location, setLocation] = useState('');
-  const [isOpen, setIsOpen] = useState({ category: false, location: false });
 
   const categories = [
-    { value: 'conferences', label: 'Conferences', icon: '🎯' },
-    { value: 'workshops', label: 'Workshops', icon: '💡' },
-    { value: 'networking', label: 'Networking', icon: '🤝' },
-    { value: 'seminars', label: 'Seminars', icon: '📚' },
+    { value: 'conferences', label: 'Conferences' },
+    { value: 'workshops', label: 'Workshops' },
+    { value: 'networking', label: 'Networking' },
+    { value: 'seminars', label: 'Seminars' },
+    { value: 'webinars', label: 'Webinars' },
   ];
 
   const locations = [
-    { value: 'newyork', label: 'New York', icon: '🗽' },
-    { value: 'losangeles', label: 'Los Angeles', icon: '🌴' },
-    { value: 'chicago', label: 'Chicago', icon: '🌆' },
-    { value: 'miami', label: 'Miami', icon: '🏖' },
+    { value: 'newyork', label: 'New York' },
+    { value: 'losangeles', label: 'Los Angeles' },
+    { value: 'chicago', label: 'Chicago' },
+    { value: 'miami', label: 'Miami' },
+    { value: 'remote', label: 'Remote' },
+  ];
+
+  const quickFilters = [
+    'This Weekend',
+    'Free Events', 
+    'Music',
+    'Tech',
+    'Food & Drink',
+    'Online'
   ];
 
   const handleSearch = () => {
     console.log('Searching with:', { searchTerm, category, location });
   };
 
+  const handleQuickFilter = (filter: string) => {
+    console.log('Quick filter:', filter);
+  };
+
   return (
-    <section className="py-24 px-4">
-      <div className="max-w-4xl mx-auto">
+    <section className="py-24 px-4 bg-muted/20">
+      <div className="container max-w-5xl mx-auto">
         {/* Header */}
-        <div className="text-center mb-12">
-          <h2 className="text-sm font-semibold text-indigo-500 tracking-wide uppercase mb-3">
+        <div className="text-center mb-12 section-header">
+          <Badge variant="secondary" className="mb-4">
             Event Discovery
-          </h2>
-          <h3 className="text-4xl font-bold text-slate-900 mb-4">
+          </Badge>
+          
+          <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-foreground mb-4 tracking-tight">
             Find Your Perfect{' '}
-            <span className="bg-clip-text text-transparent bg-gradient-to-r from-indigo-500 to-purple-500">
+            <span className="text-muted-foreground">
               Event
             </span>
-          </h3>
-          <p className="text-slate-600 max-w-2xl mx-auto">
-            Discover amazing events happening around you. Use our powerful search to find exactly what you're looking for.
+          </h2>
+          
+          <p className="text-muted-foreground max-w-2xl mx-auto leading-relaxed">
+            Discover amazing events happening around you. Use our powerful search to find exactly what you&apos;re looking for.
           </p>
         </div>
 
         {/* Search Container */}
-        <div className="relative">
-          {/* Background decoration */}
-          <div className="absolute inset-0 bg-gradient-to-r from-indigo-50 via-purple-50 to-pink-50 rounded-2xl -m-2 blur-xl" />
-
-          {/* Search Form */}
-          <div className="relative bg-white rounded-xl shadow-xl p-6">
-            <div className="grid gap-4 md:grid-cols-[1fr,auto,auto,auto]">
+        <Card className="search-card border-0 shadow-lg bg-background/80 backdrop-blur-sm">
+          <CardContent className="p-6">
+            <div className="grid gap-4 lg:grid-cols-[1fr,200px,200px,auto]">
               {/* Search Input */}
-              <div className="relative">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-                <input
+              <div className="relative search-input">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
                   type="text"
-                  placeholder="Search events..."
+                  placeholder="Search events, keywords, topics..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-12 pr-4 py-3 rounded-lg bg-slate-50 border border-slate-200 
-                           focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500
-                           transition-all duration-200"
+                  className="pl-10 h-12 bg-muted/30 border-muted focus-visible:ring-1 focus-visible:ring-ring"
                 />
               </div>
 
-              {/* Category Dropdown */}
-              <div className="relative">
-                <button
-                  onClick={() => setIsOpen(prev => ({ ...prev, category: !prev.category }))}
-                  className="w-full md:w-auto px-4 py-3 rounded-lg bg-slate-50 border border-slate-200
-                           flex items-center justify-between gap-2 hover:bg-slate-100 transition-colors"
-                >
-                  <Calendar className="w-5 h-5 text-slate-400" />
-                  <span className="text-slate-700">{category || 'Category'}</span>
-                  <ChevronDown className="w-4 h-4 text-slate-400" />
-                </button>
-
-                {isOpen.category && (
-                  <div className="absolute top-full left-0 mt-2 w-full bg-white rounded-lg shadow-xl border border-slate-100 py-2 z-10">
+              {/* Category Select */}
+              <div className="category-select">
+                <Select value={category} onValueChange={setCategory}>
+                  <SelectTrigger className="h-12 bg-muted/30 border-muted">
+                    <Calendar className="w-4 h-4 mr-2 text-muted-foreground" />
+                    <SelectValue placeholder="Category" />
+                  </SelectTrigger>
+                  <SelectContent>
                     {categories.map((cat) => (
-                      <button
-                        key={cat.value}
-                        onClick={() => {
-                          setCategory(cat.label);
-                          setIsOpen(prev => ({ ...prev, category: false }));
-                        }}
-                        className="w-full px-4 py-2 text-left hover:bg-slate-50 flex items-center gap-2"
-                      >
-                        <span>{cat.icon}</span>
-                        <span>{cat.label}</span>
-                      </button>
+                      <SelectItem key={cat.value} value={cat.value}>
+                        {cat.label}
+                      </SelectItem>
                     ))}
-                  </div>
-                )}
+                  </SelectContent>
+                </Select>
               </div>
 
-              {/* Location Dropdown */}
-              <div className="relative">
-                <button
-                  onClick={() => setIsOpen(prev => ({ ...prev, location: !prev.location }))}
-                  className="w-full md:w-auto px-4 py-3 rounded-lg bg-slate-50 border border-slate-200
-                           flex items-center justify-between gap-2 hover:bg-slate-100 transition-colors"
-                >
-                  <MapPin className="w-5 h-5 text-slate-400" />
-                  <span className="text-slate-700">{location || 'Location'}</span>
-                  <ChevronDown className="w-4 h-4 text-slate-400" />
-                </button>
-
-                {isOpen.location && (
-                  <div className="absolute top-full left-0 mt-2 w-full bg-white rounded-lg shadow-xl border border-slate-100 py-2 z-10">
+              {/* Location Select */}
+              <div className="location-select">
+                <Select value={location} onValueChange={setLocation}>
+                  <SelectTrigger className="h-12 bg-muted/30 border-muted">
+                    <MapPin className="w-4 h-4 mr-2 text-muted-foreground" />
+                    <SelectValue placeholder="Location" />
+                  </SelectTrigger>
+                  <SelectContent>
                     {locations.map((loc) => (
-                      <button
-                        key={loc.value}
-                        onClick={() => {
-                          setLocation(loc.label);
-                          setIsOpen(prev => ({ ...prev, location: false }));
-                        }}
-                        className="w-full px-4 py-2 text-left hover:bg-slate-50 flex items-center gap-2"
-                      >
-                        <span>{loc.icon}</span>
-                        <span>{loc.label}</span>
-                      </button>
+                      <SelectItem key={loc.value} value={loc.value}>
+                        {loc.label}
+                      </SelectItem>
                     ))}
-                  </div>
-                )}
+                  </SelectContent>
+                </Select>
               </div>
 
               {/* Search Button */}
-              <button
+              <Button 
                 onClick={handleSearch}
-                className="px-8 py-3 rounded-lg bg-gradient-to-r from-indigo-500 to-purple-500 
-                         text-white font-medium hover:opacity-90 transition-opacity
-                         focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                className="h-12 px-8 search-button"
+                size="lg"
               >
+                <Search className="w-4 h-4 mr-2" />
                 Search
-              </button>
+              </Button>
             </div>
+
+            {/* Advanced Filters Toggle */}
+            <div className="mt-4 pt-4 border-t border-muted">
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="text-muted-foreground hover:text-foreground"
+              >
+                <Filter className="w-4 h-4 mr-2" />
+                Advanced Filters
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Quick Filters */}
+        <div className="mt-8 quick-filters">
+          <div className="text-center mb-4">
+            <span className="text-sm text-muted-foreground">Popular searches:</span>
+          </div>
+          
+          <div className="flex flex-wrap gap-2 justify-center">
+            {quickFilters.map((filter, index) => (
+              <Badge
+                key={filter}
+                variant="secondary"
+                className="cursor-pointer hover:bg-muted transition-colors duration-200 quick-filter-badge"
+                style={{ animationDelay: `${index * 50}ms` }}
+                onClick={() => handleQuickFilter(filter)}
+              >
+                {filter}
+              </Badge>
+            ))}
           </div>
         </div>
 
-        {/* Quick Filters */}
-        <div className="mt-8 flex flex-wrap gap-2 justify-center">
-          {['This Weekend', 'Free Events', 'Music', 'Tech', 'Food'].map((filter) => (
-            <button
-              key={filter}
-              className="px-4 py-1 rounded-full bg-slate-100 text-slate-600 text-sm
-                       hover:bg-slate-200 transition-colors"
+        {/* Stats */}
+        <div className="mt-12 grid grid-cols-2 md:grid-cols-4 gap-6 stats-grid">
+          {[
+            { number: '10K+', label: 'Events' },
+            { number: '50+', label: 'Cities' },
+            { number: '100K+', label: 'Attendees' },
+            { number: '500+', label: 'Organizers' },
+          ].map((stat, index) => (
+            <div 
+              key={stat.label} 
+              className="text-center p-4 rounded-lg bg-background/60 backdrop-blur-sm border stat-item"
+              style={{ animationDelay: `${index * 100}ms` }}
             >
-              {filter}
-            </button>
+              <div className="text-2xl font-bold text-foreground">{stat.number}</div>
+              <div className="text-sm text-muted-foreground">{stat.label}</div>
+            </div>
           ))}
         </div>
       </div>
+
+      <style jsx>{`
+        @keyframes fadeInUp {
+          from {
+            opacity: 0;
+            transform: translateY(24px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+
+        @keyframes slideInScale {
+          from {
+            opacity: 0;
+            transform: translateY(16px) scale(0.95);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+          }
+        }
+
+        @keyframes fadeInStagger {
+          from {
+            opacity: 0;
+            transform: translateY(8px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+
+        .section-header {
+          animation: fadeInUp 0.8s ease-out;
+        }
+
+        .search-card {
+          animation: slideInScale 0.8s ease-out 0.3s both;
+        }
+
+        .search-input,
+        .category-select,
+        .location-select,
+        .search-button {
+          animation: fadeInUp 0.6s ease-out 0.5s both;
+        }
+
+        .category-select {
+          animation-delay: 0.6s;
+        }
+
+        .location-select {
+          animation-delay: 0.7s;
+        }
+
+        .search-button {
+          animation-delay: 0.8s;
+        }
+
+        .quick-filters {
+          animation: fadeInUp 0.8s ease-out 0.9s both;
+        }
+
+        .quick-filter-badge {
+          animation: fadeInStagger 0.5s ease-out both;
+        }
+
+        .stats-grid {
+          animation: fadeInUp 0.8s ease-out 1.1s both;
+        }
+
+        .stat-item {
+          animation: fadeInStagger 0.6s ease-out both;
+        }
+      `}</style>
     </section>
   );
 };

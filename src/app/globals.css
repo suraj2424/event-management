@@ -5,11 +5,6 @@
 @tailwind components;
 @tailwind utilities;
 
-body {
-  /* font-family: Arial, Helvetica, 'Lato', sans-serif; */
-  font-family: "Lato", sans-serif;
-}
-
 @layer utilities {
   .text-balance {
     text-wrap: balance;
@@ -44,6 +39,7 @@ body {
     --chart-5: 27 87% 67%;
     --radius: 0.5rem;
   }
+
   .dark {
     --background: 20 14.3% 4.1%;
     --foreground: 60 9.1% 97.8%;
@@ -70,6 +66,15 @@ body {
     --chart-4: 280 65% 60%;
     --chart-5: 340 75% 55%;
   }
+
+  * {
+    @apply border-border;
+  }
+  
+  body {
+    @apply bg-background text-foreground;
+    font-family: "Lato", sans-serif;
+  }
 }
 
 
@@ -93,4 +98,32 @@ body {
   .backdrop-blur-lg {
     backdrop-filter: blur(16px);
   }
+}
+
+/* Minimal animations */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.3s ease-out forwards;
+}
+
+/* Pulse animation for skeletons (if not already included) */
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.animate-pulse {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }

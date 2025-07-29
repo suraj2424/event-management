@@ -1,26 +1,29 @@
-import NextAuth from "next-auth/next";
-import type { DefaultSession } from "next-auth";
-import type { NextAuthOptions } from "next-auth";
+import NextAuth from "next-auth";
+import type { NextAuthOptions, Session, User } from "next-auth";
+import type { JWT } from "next-auth/jwt";
 import CredentialsProvider from "next-auth/providers/credentials";
 import prismadb from "@/providers/prismaclient";
 import { comparePassword } from "@/lib/backend/handlePasswords";
 import type { NextApiRequest, NextApiResponse } from "next";
 
-// Extend NextAuth module types
-declare module "next-auth" {
-  interface Session extends DefaultSession {
-    user: {
-      id: string;
-      role: "ADMIN" | "ORGANIZER" | "ATTENDEE";
-    } & DefaultSession["user"];
-  }
+// Custom types for our callbacks
+interface CustomUser extends User {
+  role: "ADMIN" | "ORGANIZER" | "ATTENDEE";
+}
 
-  interface User {
+interface CustomJWT extends JWT {
+  id: string;
+  role: "ADMIN" | "ORGANIZER" | "ATTENDEE";
+}
+
+interface CustomSession extends Session {
+  user: {
     id: string;
-    name: string;
-    email: string;
+    name?: string | null;
+    email?: string | null;
+    image?: string | null;
     role: "ADMIN" | "ORGANIZER" | "ATTENDEE";
-  }
+  };
 }
 
 export const authOptions: NextAuthOptions = {
@@ -32,7 +35,7 @@ export const authOptions: NextAuthOptions = {
         password: { label: "Password", type: "password" },
         role: { label: "Role", type: "text" },
       },
-      async authorize(credentials) {
+      async authorize(credentials): Promise<CustomUser | null> {
         if (!credentials?.email || !credentials?.password || !credentials?.role) {
           throw new Error("Missing credentials");
         }
@@ -57,8 +60,9 @@ export const authOptions: NextAuthOptions = {
 
         return {
           id: user.id.toString(),
-          name: user.name || "",
+          name: user.name || null,
           email: user.email,
+          image: null, // Add if you have user images
           role: user.role as "ADMIN" | "ORGANIZER" | "ATTENDEE",
         };
       },
@@ -74,19 +78,50 @@ export const authOptions: NextAuthOptions = {
     updateAge: 24 * 60 * 60, // 24 hours
   },
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ 
+      token, 
+      user 
+    }: { 
+      token: JWT; 
+      user?: User | CustomUser;
+    }): Promise<CustomJWT> {
+      // If user is signing in for the first time
       if (user) {
-        token.id = user.id;
-        token.role = user.role;
+        const customUser = user as CustomUser;
+        return {
+          ...token,
+          id: customUser.id,
+          role: customUser.role,
+          name: customUser.name,
+          email: customUser.email,
+          picture: customUser.image,
+        };
       }
-      return token;
+      
+      // Return previous token if the user is already signed in
+      return token as CustomJWT;
     },
-    async session({ session, token }) {
-      if (session?.user) {
-        session.user.id = token.id as string;
-        session.user.role = token.role as "ADMIN" | "ORGANIZER" | "ATTENDEE";
-      }
-      return session;
+    
+    async session({ 
+      session, 
+      token 
+    }: { 
+      session: Session; 
+      token: JWT | CustomJWT;
+    }): Promise<CustomSession> {
+      const customToken = token as CustomJWT;
+      
+      return {
+        ...session,
+        user: {
+          id: customToken.id,
+          name: customToken.name || null,
+          email: customToken.email || null,
+          image: customToken.picture || null,
+          role: customToken.role,
+        },
+        expires: session.expires,
+      };
     },
   },
 };

@@ -4,6 +4,7 @@ import multer from "multer";
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 import { z } from "zod";
 import prismadb from "@/providers/prismaclient";
+import { eventRedis } from "@/lib/redis";
 
 // Type for request with files
 interface NextApiRequestWithFiles extends NextApiRequest {
@@ -52,7 +53,10 @@ const EventSchema = z.object({
     message: "Invalid end date",
   }),
   location: z.string().min(1, "Location is required"),
-  capacity: z.coerce.number().int().positive("Capacity must be a positive integer"),
+  capacity: z.coerce
+    .number()
+    .int()
+    .positive("Capacity must be a positive integer"),
   organizerId: z.string().min(1, "Organizer ID is required"),
   contactEmail: z.string().email("Invalid email"),
   contactPhone: z.string().optional(),
@@ -63,7 +67,11 @@ const EventSchema = z.object({
 });
 
 // Helper function to upload file to S3
-const uploadToS3 = async (file: Express.Multer.File, eventTitle: string, folder: string): Promise<string> => {
+const uploadToS3 = async (
+  file: Express.Multer.File,
+  eventTitle: string,
+  folder: string
+): Promise<string> => {
   const command = new PutObjectCommand({
     Bucket: process.env.AWS_S3_BUCKET_NAME!,
     Key: `${eventTitle}/${folder}/${file.originalname}`,
@@ -75,7 +83,12 @@ const uploadToS3 = async (file: Express.Multer.File, eventTitle: string, folder:
 };
 
 // Error handler middleware
-const errorHandler = (err: Error & { statusCode?: number }, req: NextApiRequestWithFiles, res: NextApiResponse, next: NextHandler) => {
+const errorHandler = (
+  err: Error & { statusCode?: number },
+  req: NextApiRequestWithFiles,
+  res: NextApiResponse,
+  next: NextHandler
+) => {
   console.error(err);
   res.status(err.statusCode || 500).json({
     error: err.message || "An unexpected error occurred",
@@ -87,11 +100,13 @@ const errorHandler = (err: Error & { statusCode?: number }, req: NextApiRequestW
 const router = createRouter<NextApiRequestWithFiles, NextApiResponse>();
 
 // Apply middlewares
-router.use(uploadMiddleware as unknown as (
-  req: NextApiRequestWithFiles,
-  res: NextApiResponse,
-  next: NextHandler
-) => void);
+router.use(
+  uploadMiddleware as unknown as (
+    req: NextApiRequestWithFiles,
+    res: NextApiResponse,
+    next: NextHandler
+  ) => void
+);
 
 // POST route for event creation
 router.post(async (req, res) => {
@@ -113,7 +128,9 @@ router.post(async (req, res) => {
 
     if (files.photos) {
       photoUrls = await Promise.all(
-        files.photos.map((photo) => uploadToS3(photo, validatedData.title, "photos"))
+        files.photos.map((photo) =>
+          uploadToS3(photo, validatedData.title, "photos")
+        )
       );
     }
 
@@ -122,7 +139,7 @@ router.post(async (req, res) => {
           create: validatedData.socialLinks,
         }
       : undefined;
-    
+
     const event = await prismadb.event.create({
       data: {
         title: validatedData.title,
@@ -155,6 +172,9 @@ router.post(async (req, res) => {
       },
     });
 
+    await eventRedis.cacheEvent(event.id.toString(), event);
+    await eventRedis.invalidateEventCaches(); // Clear list caches
+
     res.status(201).json(event);
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -168,30 +188,40 @@ router.post(async (req, res) => {
 router.get(async (req, res) => {
   try {
     const page = parseInt(req.query.page as string) || 1;
-    const limit = parseInt(req.query.limit as string) || 10;
+    const limit = parseInt(req.query.limit as string) || 2;
     const skip = (page - 1) * limit;
-    const eventType = req.query.type as string || 'all';
+    const eventType = (req.query.type as string) || "all";
 
     const currentDate = new Date();
 
     // Define filter based on event type
-    let filter: { AND?: Array<{ startDate?: { lte: Date }, endDate?: { gte: Date } }> } | { startDate?: { gt: Date } } | { endDate?: { lt: Date } } = {};
+    let filter:
+      | { AND?: Array<{ startDate?: { lte: Date }; endDate?: { gte: Date } }> }
+      | { startDate?: { gt: Date } }
+      | { endDate?: { lt: Date } } = {};
     switch (eventType) {
-      case 'upcoming':
+      case "upcoming":
         filter = { startDate: { gt: currentDate } };
         break;
-      case 'ongoing':
-        filter = { 
+      case "ongoing":
+        filter = {
           AND: [
             { startDate: { lte: currentDate } },
-            { endDate: { gte: currentDate } }
-          ]
+            { endDate: { gte: currentDate } },
+          ],
         };
         break;
-      case 'past':
+      case "past":
         filter = { endDate: { lt: currentDate } };
         break;
       // 'all' doesn't need a filter
+    }
+
+    const cacheKey = { page, limit, type: eventType };
+    const cachedResult = await eventRedis.getCachedEventList(cacheKey);
+
+    if (cachedResult) {
+      return res.status(200).json(cachedResult);
     }
 
     // Fetch filtered and paginated events from the database
@@ -231,6 +261,8 @@ router.get(async (req, res) => {
     // Calculate total pages
     const totalPages = Math.ceil(totalEvents / limit);
 
+    await eventRedis.cacheEventList(cacheKey, eventsWithStatus, totalPages, totalEvents);
+
     res.status(200).json({
       events: eventsWithStatus,
       currentPage: page,
@@ -247,11 +279,13 @@ router.get(async (req, res) => {
 });
 
 // Apply error handler
-router.use(errorHandler as unknown as (
-  req: NextApiRequestWithFiles,
-  res: NextApiResponse,
-  next: NextHandler
-) => void);
+router.use(
+  errorHandler as unknown as (
+    req: NextApiRequestWithFiles,
+    res: NextApiResponse,
+    next: NextHandler
+  ) => void
+);
 
 export const config = {
   api: {
