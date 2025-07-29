@@ -108,7 +108,9 @@ export function EventForm() {
         });
       }
 
-      const response = await fetch("/api/events", {
+    const url = process.env.VERCEL_URL || "http://localhost:3000";
+
+      const response = await fetch(`${url}/api/events`, {
         method: "POST",
         body: formData,
       });

@@ -101,8 +101,10 @@ export const getServerSideProps: GetServerSideProps<PageProps> = async ({ query 
       queryParams.append('search', searchTerm);
     }
 
+    const url = process.env.VERCEL_URL || `http://localhost:3000`;
+
     const response = await fetch(
-      `/api/events?${queryParams.toString()}`,
+      `${url}/api/events?${queryParams.toString()}`,
       { 
         headers: {
           'Content-Type': 'application/json',

@@ -53,8 +53,10 @@ export default function ManageEvents() {
   }, []);
 
   const fetchEvents = async () => {
+    const url = process.env.VERCEL_URL || "http://localhost:3000";
+
     try {
-      const res = await fetch("/api/events/manage");
+      const res = await fetch(`${url}/api/events/manage`);
       const data = await res.json();
       setEvents(data.events || []);
     } catch (error) {
@@ -66,8 +68,9 @@ export default function ManageEvents() {
   };
 
   const handleDelete = async (id: number) => {
+    const url = process.env.VERCEL_URL || "http://localhost:3000";
     try {
-      const res = await fetch(`/api/profile/events?eventId=${id}`, {
+      const res = await fetch(`${url}/api/profile/events?eventId=${id}`, {
         method: "DELETE",
       });
       if (res.ok) {

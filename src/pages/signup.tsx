@@ -120,9 +120,11 @@ export default function SignUpPage() {
       return;
     }
 
+    const url = process.env.VERCEL_URL || "http://localhost:3000";
+
     setIsSubmitting(true);
     try {
-      const response = await fetch("/api/auth/signup", {
+      const response = await fetch(`${url}/api/auth/signup`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

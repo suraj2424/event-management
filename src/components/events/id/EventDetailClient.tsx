@@ -41,9 +41,11 @@ const EventDetailClient: React.FC<EventDetailClientProps> = ({
 
     setAttendanceLoading(true);
     setError(null);
+
+    const url = process.env.VERCEL_URL || "http://localhost:3000";
     
     try {
-      const response = await fetch(`/api/events/${eventId}/attendance`, {
+      const response = await fetch(`${url}/api/events/${eventId}/attendance`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

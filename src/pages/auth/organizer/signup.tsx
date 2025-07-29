@@ -59,8 +59,9 @@ export default function ModernSignUpPage() {
   // Submit handler
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsSubmitting(true);
+    const url = process.env.VERCEL_URL || "http://localhost:3000";
     try {
-      const response = await fetch("/api/auth/signup", {
+      const response = await fetch(`${url}/api/auth/signup`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

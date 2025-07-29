@@ -54,10 +54,11 @@ export function DashboardOverview() {
   }, []);
 
   const fetchDashboardData = async () => {
+    const url = process.env.VERCEL_URL || "http://localhost:3000";
     try {
       const [statsResponse, eventsResponse] = await Promise.all([
-        fetch("/api/dashboard/stats"),
-        fetch("/api/dashboard/recent-events"),
+        fetch(`${url}/api/dashboard/stats`),
+        fetch(`${url}/api/dashboard/recent-events`),
       ]);
 
       if (statsResponse.ok) {

@@ -104,8 +104,10 @@ export default function ProfileClient({
     setLoading(true);
     setError(null);
 
+    const url = process.env.VERCEL_URL || "http://localhost:3000";
+
     try {
-      const res = await fetch("/api/profile", {
+      const res = await fetch(`${url}/api/profile`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(profile),
@@ -135,8 +137,11 @@ export default function ProfileClient({
     setLoading(true);
     setError(null);
 
+    const url = process.env.VERCEL_URL || "http://localhost:3000";
+
+
     try {
-      const res = await fetch("/api/profile/password", {
+      const res = await fetch(`${url}/api/profile/password`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -183,8 +188,10 @@ export default function ProfileClient({
 
   const handleCancelAttendance = async (eventId: string) => {
     setLoading(true);
+    const url = process.env.VERCEL_URL || "http://localhost:3000";
+
     try {
-      const response = await fetch(`/api/events/${eventId}/attendance`, {
+      const response = await fetch(`${url}/api/events/${eventId}/attendance`, {
         method: "DELETE",
       });
 

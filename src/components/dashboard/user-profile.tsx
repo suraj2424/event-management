@@ -68,7 +68,10 @@ export function UserProfile() {
       setIsSubmitting(true);
       setMessage(null);
 
-      const response = await fetch("/api/user/profile", {
+    const url = process.env.VERCEL_URL || "http://localhost:3000";
+
+
+      const response = await fetch(`${url}/api/user/profile`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",

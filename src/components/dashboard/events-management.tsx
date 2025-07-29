@@ -71,8 +71,9 @@ export function EventsManagement() {
   }, []);
 
   const fetchEvents = async () => {
+    const url = process.env.VERCEL_URL || "http://localhost:3000";
     try {
-      const response = await fetch("/api/events/my-events");
+      const response = await fetch(`${url}/api/events/my-events`);
       if (response.ok) {
         const data = await response.json();
         setEvents(data.events);
@@ -85,8 +86,9 @@ export function EventsManagement() {
   };
 
   const handleDeleteEvent = async (eventId: string) => {
+    const url = process.env.VERCEL_URL || "http://localhost:3000";
     try {
-      const response = await fetch(`/api/events/${eventId}`, {
+      const response = await fetch(`${url}/api/events/${eventId}`, {
         method: "DELETE",
       });
       if (response.ok) {
