@@ -4,6 +4,7 @@ import Link from "next/link";
 import { signOut } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import { ThemeToggle } from '../theme-toggle';
 import {
   Compass,
   LogIn,
@@ -78,6 +79,14 @@ const MobileMenu: React.FC<MobileMenuProps> = ({
               Explore Events
             </Link>
           </Button>
+
+          {/* Theme Toggle */}
+          <div 
+            className="flex items-center justify-center mobile-nav-item"
+            style={{ animationDelay: '225ms' }}
+          >
+            <ThemeToggle />
+          </div>
 
           {status === "loading" ? (
             <Button variant="outline" className="w-full" disabled>
