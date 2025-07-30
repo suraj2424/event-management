@@ -7,7 +7,6 @@ import { AlertTriangle, ArrowLeft, Calendar } from "lucide-react";
 import { Session } from "next-auth";
 import Link from "next/link";
 import EventDetailClient from "@/components/events/id/EventDetailClient";
-import { prismadb } from "@/providers/prismaclient";
 
 interface SocialLinks {
   facebook?: string;
@@ -70,107 +69,82 @@ interface EventPageProps {
   session: SerializableSession | null;
 }
 
-// Database function to fetch event data
-async function getEventFromDatabase(eventId: string): Promise<Event | null> {
-  try {
-    const event = await prismadb.event.findUnique({
-      where: { id: eventId },
-      include: {
-        organizer: {
-          select: { 
-            name: true, 
-            email: true 
-          }
-        }
-      }
-    });
-    
-    if (!event) return null;
-    
-    return {
-      id: event.id,
-      title: event.title,
-      description: event.description,
-      startDate: event.startDate.toISOString(),
-      endDate: event.endDate.toISOString(),
-      logo: event.logo,
-      location: event.location,
-      capacity: event.capacity,
-      status: event.status,
-      photos: event.photos,
-      contactEmail: event.contactEmail,
-      contactPhone: event.contactPhone,
-      hostName: event.hostName,
-      hostDescription: event.hostDescription,
-      organizer: {
-        name: event.organizer.name || "",
-        email: event.organizer.email
-      }
-    };
-  } catch (error) {
-    console.error("Database error fetching event:", error);
-    return null;
+// Server function to fetch event data
+async function fetchEventData(eventId: string): Promise<Event | null> {
+  const baseUrl =
+    process.env.NEXT_PUBLIC_API_URL ||
+    `http://localhost:${process.env.PORT || 3000}`;
+
+  const response = await fetch(`${baseUrl}/api/events/${eventId}`, {
+    headers: {
+      "Content-Type": "application/json",
+      "Cache-Control": "no-cache",
+    },
+  });
+
+  if (!response.ok) {
+    if (response.status === 404) {
+      return null;
+    }
+    throw new Error(`Event API error: ${response.status}`);
   }
+
+  return response.json();
 }
 
-// Database function to fetch event details
-async function getEventDetailsFromDatabase(eventId: string): Promise<EventDetails | null> {
-  try {
-    // Fetch special guests
-    const specialGuests = await prismadb.specialGuest.findMany({
-      where: { eventId },
-      select: {
-        id: true,
-        guestName: true,
-        guestDescription: true
-      }
-    });
+// Server function to fetch event details
+async function fetchEventDetails(eventId: string): Promise<EventDetails | null> {
+  const baseUrl =
+    process.env.NEXT_PUBLIC_API_URL ||
+    `http://localhost:${process.env.PORT || 3000}`;
 
-    // Fetch social links (assuming they're stored in a separate table or in the event table)
-    const socialLinksData = await prismadb.event.findUnique({
-      where: { id: eventId },
-      select: {
-        socialLinks: true // Assuming this is a JSON field
-      }
-    });
-    
-    return {
-      specialGuests: specialGuests.map(guest => ({
-        id: guest.id,
-        guestName: guest.guestName,
-        guestDescription: guest.guestDescription
-      })),
-      socialLinks: (socialLinksData?.socialLinks as SocialLinks) || {}
-    };
-  } catch (error) {
-    console.error("Database error fetching event details:", error);
-    return null;
+  const response = await fetch(`${baseUrl}/api/events/${eventId}/details`, {
+    headers: {
+      "Content-Type": "application/json",
+      "Cache-Control": "no-cache",
+    },
+  });
+
+  if (!response.ok) {
+    if (response.status === 404) {
+      return null;
+    }
+    throw new Error(`Event details API error: ${response.status}`);
   }
+
+  return response.json();
 }
 
-// Database function to fetch attendance data
-async function getAttendanceFromDatabase(eventId: string, userId: string): Promise<Attendance | null> {
+// Server function to fetch attendance data
+async function fetchAttendanceData(eventId: string, cookie: string): Promise<Attendance | null> {
+  const baseUrl =
+    process.env.NEXT_PUBLIC_API_URL ||
+    `http://localhost:${process.env.PORT || 3000}`;
+
   try {
-    const registration = await prismadb.eventRegistration.findFirst({
-      where: {
-        eventId,
-        userId
+    const response = await fetch(`${baseUrl}/api/events/${eventId}/attendance`, {
+      headers: {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-cache",
+        Cookie: cookie,
       },
-      select: {
-        status: true
-      }
     });
-    
-    return {
-      isRegistered: !!registration,
-      status: registration?.status || null
-    };
+
+    if (response.ok) {
+      const attendance = await response.json();
+      return {
+        isRegistered: attendance.isRegistered,
+        status: attendance.attendance?.status || null,
+      };
+    } else if (response.status === 404) {
+      return { isRegistered: false, status: null };
+    } else {
+      console.error("Failed to fetch attendance status:", response.statusText);
+      return { isRegistered: false, status: null };
+    }
   } catch (error) {
-    console.error("Database error fetching attendance:", error);
-    return { 
-      isRegistered: false, 
-      status: null 
-    };
+    console.error("Error fetching attendance:", error);
+    return { isRegistered: false, status: null };
   }
 }
 
@@ -273,10 +247,10 @@ export const getServerSideProps: GetServerSideProps<EventPageProps> = async ({
     const session: Session | null = await getServerSession(req, res, authOptions);
     const isAuthenticated = !!session;
 
-    // Fetch event and event details using database functions
+    // Fetch event and event details using server functions
     const [eventData, detailsData] = await Promise.all([
-      getEventFromDatabase(eventId),
-      getEventDetailsFromDatabase(eventId),
+      fetchEventData(eventId),
+      fetchEventDetails(eventId),
     ]);
 
     if (!eventData || !detailsData) {
@@ -285,8 +259,8 @@ export const getServerSideProps: GetServerSideProps<EventPageProps> = async ({
 
     // Fetch attendance data if user is authenticated
     let attendanceData: Attendance | null = null;
-    if (session?.user?.id) {
-      attendanceData = await getAttendanceFromDatabase(eventId, session.user.id);
+    if (session?.user) {
+      attendanceData = await fetchAttendanceData(eventId, req.headers.cookie || "");
     }
 
     // Create serializable session object
