@@ -101,17 +101,32 @@ export const getServerSideProps: GetServerSideProps<PageProps> = async ({ query 
       queryParams.append('search', searchTerm);
     }
 
-    const url = process.env.NEXT_PUBLIC_VERCEL_CLIENT_URL || `http://localhost:3000`;
+    // Dynamic URL based on environment
+    const getBaseUrl = () => {
+      // Production - use VERCEL_URL or custom domain
+      if (process.env.NEXT_PUBLIC_VERCEL_CLIENT_URL) {
+        return `${process.env.NEXT_PUBLIC_VERCEL_CLIENT_URL}`;
+      }
+      
+      // Custom production URL
+      if (process.env.NEXT_PUBLIC_SITE_URL) {
+        return process.env.NEXT_PUBLIC_SITE_URL;
+      }
+      
+      // Development fallback
+      return 'http://localhost:3000';
+    };
+
+    const baseUrl = getBaseUrl();
 
     const response = await fetch(
-      `${url}/api/events?${queryParams.toString()}`,
+      `${baseUrl}/api/events?${queryParams.toString()}`,
       { 
         headers: {
           'Content-Type': 'application/json',
           'User-Agent': 'EventsPage/1.0',
         },
-        // Add timeout to prevent hanging requests
-        signal: AbortSignal.timeout(10000), // 10 second timeout
+        signal: AbortSignal.timeout(10000),
       }
     );
 
