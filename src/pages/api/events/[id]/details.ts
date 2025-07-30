@@ -1,4 +1,4 @@
-import { eventRedis } from "@/lib/redis";
+// import { eventRedis } from "@/lib/redis";
 import prismadb from "@/providers/prismaclient";
 import { NextApiRequest, NextApiResponse } from "next";
 
@@ -18,10 +18,10 @@ export default async function handler(
   }
 
   try {
-    const cachedDetails = await eventRedis.getCachedEventDetails(id);
-    if (cachedDetails) {
-      return res.status(200).json(cachedDetails);
-    }
+    // const cachedDetails = await eventRedis.getCachedEventDetails(id);
+    // if (cachedDetails) {
+    //   return res.status(200).json(cachedDetails);
+    // }
 
     const eventDetails = await prismadb.event.findUnique({
       where: { id: parseInt(id) },
@@ -47,7 +47,7 @@ export default async function handler(
       return res.status(404).json({ message: "Event not found" });
     }
 
-    await eventRedis.cacheEventDetails(id, eventDetails);
+    // await eventRedis.cacheEventDetails(id, eventDetails);
 
     return res.status(200).json(eventDetails);
   } catch (error) {

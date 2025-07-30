@@ -2,8 +2,8 @@ import { NextApiRequest, NextApiResponse } from "next";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "../auth/[...nextauth]";
 import prismadb from "@/providers/prismaclient";
-import { eventRedis } from "@/lib/redis";
-import { User } from "@prisma/client";
+// import { eventRedis } from "@/lib/redis";
+// import { User } from "@prisma/client";
 
 export default async function handler(
   req: NextApiRequest,
@@ -18,12 +18,12 @@ export default async function handler(
   // GET user profile
   if (req.method === "GET") {
     try {
-      const cachedProfile = await eventRedis.getCachedUserProfile(
-        session.user.id
-      );
-      if (cachedProfile) {
-        return res.status(200).json(cachedProfile);
-      }
+      // const cachedProfile = await eventRedis.getCachedUserProfile(
+      //   session.user.id
+      // );
+      // if (cachedProfile) {
+      //   return res.status(200).json(cachedProfile);
+      // }
 
       const user = await prismadb.user.findUnique({
         where: { id: session.user.id },
@@ -35,13 +35,13 @@ export default async function handler(
       });
 
       if (!user) {
-        await eventRedis.cacheUserExists(session.user.id, false);
+        // await eventRedis.cacheUserExists(session.user.id, false);
         return res.status(404).json({ message: "User not found" });
       }
 
       // Cache the profile data
-      await eventRedis.cacheUserProfile(session.user.id, user);
-      await eventRedis.cacheUserExists(session.user.id, true);
+      // await eventRedis.cacheUserProfile(session.user.id, user);
+      // await eventRedis.cacheUserExists(session.user.id, true);
 
       return res.status(200).json(user);
     } catch (error) {
@@ -61,17 +61,17 @@ export default async function handler(
     }
 
     // Check cache for email availability first
-    const cachedEmailCheck = await eventRedis.getCachedEmailCheck(email);
-    if (cachedEmailCheck && !cachedEmailCheck.available && cachedEmailCheck.userId !== session.user.id) {
-      return res.status(400).json({ message: 'Email already in use' });
-    }
+    // const cachedEmailCheck = await eventRedis.getCachedEmailCheck(email);
+    // if (cachedEmailCheck && !cachedEmailCheck.available && cachedEmailCheck.userId !== session.user.id) {
+    //   return res.status(400).json({ message: 'Email already in use' });
+    // }
 
     // Get current user data for old email
-    const currentUser = await eventRedis.getCachedUserProfile(session.user.id);
-    const oldEmail = currentUser ? (currentUser as User).email : null;
+    // const currentUser = await eventRedis.getCachedUserProfile(session.user.id);
+    // const oldEmail = currentUser ? (currentUser as User).email : null;
 
     // Check if email is already taken by another user (if not cached)
-    if (!cachedEmailCheck) {
+    
       const existingUser = await prismadb.user.findFirst({
         where: {
           email,
@@ -80,13 +80,13 @@ export default async function handler(
       });
 
       if (existingUser) {
-        await eventRedis.cacheEmailCheck(email, existingUser.id);
+        // await eventRedis.cacheEmailCheck(email, existingUser.id);
         return res.status(400).json({ message: 'Email already in use' });
       }
       
       // Cache that email is available
-      await eventRedis.cacheEmailCheck(email, null);
-    }
+      // await eventRedis.cacheEmailCheck(email, null);
+    
 
     // Update user in database
     const updatedUser = await prismadb.user.update({
@@ -99,9 +99,9 @@ export default async function handler(
       }
     });
 
-    // Update caches after successful update
-    await eventRedis.cacheUserProfile(session.user.id, updatedUser);
-    await eventRedis.invalidateUserCaches(session.user.id, oldEmail ?? undefined, email);
+    // // Update caches after successful update
+    // await eventRedis.cacheUserProfile(session.user.id, updatedUser);
+    // await eventRedis.invalidateUserCaches(session.user.id, oldEmail ?? undefined, email);
 
     return res.status(200).json(updatedUser);
   } catch (error) {

@@ -2,7 +2,7 @@ import { NextApiRequest, NextApiResponse } from "next";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/pages/api/auth/[...nextauth]";
 import prismadb from "@/providers/prismaclient";
-import { eventRedis } from "@/lib/redis";
+// import { eventRedis } from "@/lib/redis";
 
 export default async function handler(
   req: NextApiRequest,
@@ -46,16 +46,16 @@ export default async function handler(
     switch (req.method) {
       case "GET": {
         // Check cache first
-        const cachedAttendance = await eventRedis.getCachedUserAttendance(
-          eventId.toString(),
-          session.user.id
-        );
-        if (cachedAttendance) {
-          return res.status(200).json({
-            isRegistered: !!cachedAttendance,
-            attendance: cachedAttendance,
-          });
-        }
+        // const cachedAttendance = await eventRedis.getCachedUserAttendance(
+        //   eventId.toString(),
+        //   session.user.id
+        // );
+        // if (cachedAttendance) {
+        //   return res.status(200).json({
+        //     isRegistered: !!cachedAttendance,
+        //     attendance: cachedAttendance,
+        //   });
+        // }
 
         // Original database query
         const attendance = await prismadb.attendance.findUnique({
@@ -68,17 +68,17 @@ export default async function handler(
         });
 
         // Cache the result
-        if (attendance) {
-          await eventRedis.cacheUserAttendance(
-            eventId.toString(),
-            session.user.id,
-            attendance
-          );
-          await eventRedis.trackEventRegistration(
-            eventId.toString(),
-            session.user.id
-          );
-        }
+        // if (attendance) {
+        //   await eventRedis.cacheUserAttendance(
+        //     eventId.toString(),
+        //     session.user.id,
+        //     attendance
+        //   );
+        //   await eventRedis.trackEventRegistration(
+        //     eventId.toString(),
+        //     session.user.id
+        //   );
+        // }
 
         return res.status(200).json({
           isRegistered: !!attendance,
@@ -88,22 +88,22 @@ export default async function handler(
 
       case "POST": {
         // Check cache first for existing registration
-        const isAlreadyRegistered = await eventRedis.isUserRegistered(
-          eventId.toString(),
-          session.user.id
-        );
-        if (isAlreadyRegistered) {
-          const cachedAttendance = await eventRedis.getCachedUserAttendance(
-            eventId.toString(),
-            session.user.id
-          );
-          if (cachedAttendance) {
-            return res.status(400).json({
-              message: "Already registered for this event",
-              attendance: cachedAttendance,
-            });
-          }
-        }
+        // const isAlreadyRegistered = await eventRedis.isUserRegistered(
+        //   eventId.toString(),
+        //   session.user.id
+        // );
+        // if (isAlreadyRegistered) {
+        //   const cachedAttendance = await eventRedis.getCachedUserAttendance(
+        //     eventId.toString(),
+        //     session.user.id
+        //   );
+        //   if (cachedAttendance) {
+        //     return res.status(400).json({
+        //       message: "Already registered for this event",
+        //       attendance: cachedAttendance,
+        //     });
+        //   }
+        // }
 
         // Original database logic...
         const attendance = await prismadb.attendance.create({
@@ -115,15 +115,15 @@ export default async function handler(
         });
 
         // Update cache after successful registration
-        await eventRedis.cacheUserAttendance(
-          eventId.toString(),
-          session.user.id,
-          attendance
-        );
-        await eventRedis.trackEventRegistration(
-          eventId.toString(),
-          session.user.id
-        );
+        // await eventRedis.cacheUserAttendance(
+        //   eventId.toString(),
+        //   session.user.id,
+        //   attendance
+        // );
+        // await eventRedis.trackEventRegistration(
+        //   eventId.toString(),
+        //   session.user.id
+        // );
 
         return res.status(201).json({
           message: "Successfully registered for event",
@@ -151,14 +151,14 @@ export default async function handler(
         }
 
         // Remove from cache after successful unregistration
-        await eventRedis.removeEventRegistration(
-          eventId.toString(),
-          session.user.id
-        );
-        await eventRedis.invalidateAttendanceCache(
-          eventId.toString(),
-          session.user.id
-        );
+        // await eventRedis.removeEventRegistration(
+        //   eventId.toString(),
+        //   session.user.id
+        // );
+        // await eventRedis.invalidateAttendanceCache(
+        //   eventId.toString(),
+        //   session.user.id
+        // );
 
         return res.status(200).json({
           message: "Successfully unregistered from event",

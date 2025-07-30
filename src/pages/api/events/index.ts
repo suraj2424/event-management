@@ -4,7 +4,7 @@ import multer from "multer";
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 import { z } from "zod";
 import prismadb from "@/providers/prismaclient";
-import { eventRedis } from "@/lib/redis";
+// import { eventRedis } from "@/lib/redis";
 
 // Type for request with files
 interface NextApiRequestWithFiles extends NextApiRequest {
@@ -172,8 +172,8 @@ router.post(async (req, res) => {
       },
     });
 
-    await eventRedis.cacheEvent(event.id.toString(), event);
-    await eventRedis.invalidateEventCaches(); // Clear list caches
+    // await eventRedis.cacheEvent(event.id.toString(), event);
+    // await eventRedis.invalidateEventCaches(); // Clear list caches
 
     res.status(201).json(event);
   } catch (error) {
@@ -217,12 +217,12 @@ router.get(async (req, res) => {
       // 'all' doesn't need a filter
     }
 
-    const cacheKey = { page, limit, type: eventType };
-    const cachedResult = await eventRedis.getCachedEventList(cacheKey);
+    // const cacheKey = { page, limit, type: eventType };
+    // const cachedResult = await eventRedis.getCachedEventList(cacheKey);
 
-    if (cachedResult) {
-      return res.status(200).json(cachedResult);
-    }
+    // if (cachedResult) {
+    //   return res.status(200).json(cachedResult);
+    // }
 
     // Fetch filtered and paginated events from the database
     const events = await prismadb.event.findMany({
@@ -261,7 +261,7 @@ router.get(async (req, res) => {
     // Calculate total pages
     const totalPages = Math.ceil(totalEvents / limit);
 
-    await eventRedis.cacheEventList(cacheKey, eventsWithStatus, totalPages, totalEvents);
+    // await eventRedis.cacheEventList(cacheKey, eventsWithStatus, totalPages, totalEvents);
 
     res.status(200).json({
       events: eventsWithStatus,

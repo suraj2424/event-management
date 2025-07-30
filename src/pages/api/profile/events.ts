@@ -2,7 +2,7 @@ import { NextApiRequest, NextApiResponse } from "next";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "../auth/[...nextauth]";
 import prismadb from "@/providers/prismaclient";
-import { eventRedis } from "@/lib/redis";
+// import { eventRedis } from "@/lib/redis";
 
 export default async function handler(
   req: NextApiRequest,
@@ -20,33 +20,33 @@ export default async function handler(
       const { page = 1, limit = 10 } = req.query;
 
       // Check cache first
-      const cachedEvents = await eventRedis.getCachedUserRegisteredEvents(
-        session.user.id,
-        Number(page),
-        Number(limit)
-      );
+      // const cachedEvents = await eventRedis.getCachedUserRegisteredEvents(
+      //   session.user.id,
+      //   Number(page),
+      //   Number(limit)
+      // );
 
-      if (cachedEvents) {
-        return res.status(200).json(cachedEvents);
-      }
+      // if (cachedEvents) {
+      //   return res.status(200).json(cachedEvents);
+      // }
 
       // Check cached attendance records
-      let attendanceRecords = await eventRedis.getCachedUserAttendanceRecords(
-        session.user.id
-      );
+      // let attendanceRecords = await eventRedis.getCachedUserAttendanceRecords(
+      //   session.user.id
+      // );
 
-      if (!attendanceRecords) {
+
         // Original database query for attendance
-        attendanceRecords = await prismadb.attendance.findMany({
+        const attendanceRecords = await prismadb.attendance.findMany({
           where: { userId: session.user.id },
           select: { eventId: true, status: true },
         });
 
-        await eventRedis.cacheUserAttendanceRecords(
-          session.user.id,
-          attendanceRecords
-        );
-      }
+        // await eventRedis.cacheUserAttendanceRecords(
+        //   session.user.id,
+        //   attendanceRecords
+        // );
+      
 
       const skip = (Number(page) - 1) * Number(limit);
 
@@ -57,7 +57,7 @@ export default async function handler(
       );
 
       // Cache the event IDs for quick reference
-      await eventRedis.cacheUserEventIds(session.user.id, eventIds);
+      // await eventRedis.cacheUserEventIds(session.user.id, eventIds);
 
       // Step 3: Fetch events based on the event IDs
       const userEvents = await prismadb.event.findMany({
@@ -109,12 +109,12 @@ export default async function handler(
       };
 
       // Cache the result
-      await eventRedis.cacheUserRegisteredEvents(
-        session.user.id,
-        userEvents,
-        result.pagination
-      );
-      await eventRedis.cacheUserEventsCount(session.user.id, totalEvents);
+      // await eventRedis.cacheUserRegisteredEvents(
+      //   session.user.id,
+      //   userEvents,
+      //   result.pagination
+      // );
+      // await eventRedis.cacheUserEventsCount(session.user.id, totalEvents);
 
       return res.status(200).json(result);
     } catch (error) {
@@ -171,11 +171,11 @@ export default async function handler(
         });
       });
 
-      await eventRedis.invalidateEventCaches(eventIdNum.toString());
-      await eventRedis.invalidateUserEventsCaches(session.user.id);
-      await eventRedis.invalidateEventCaches(
-        Array.isArray(eventId) ? eventId[0] : eventId
-      ); // Global event list invalidation
+      // await eventRedis.invalidateEventCaches(eventIdNum.toString());
+      // await eventRedis.invalidateUserEventsCaches(session.user.id);
+      // await eventRedis.invalidateEventCaches(
+      //   Array.isArray(eventId) ? eventId[0] : eventId
+      // ); // Global event list invalidation
 
       return res.status(200).json({ message: "Event deleted successfully" });
     } catch (error) {
@@ -207,16 +207,16 @@ export default async function handler(
         return res.status(404).json({ message: "Attendance record not found" });
       }
 
-      await eventRedis.updateAttendanceStatus(
-        session.user.id,
-        eventId.toString(),
-        "CANCELLED"
-      );
-      await eventRedis.invalidateUserEventsCaches(session.user.id);
-      await eventRedis.invalidateAttendanceCache(
-        eventId.toString(),
-        session.user.id
-      );
+      // await eventRedis.updateAttendanceStatus(
+      //   session.user.id,
+      //   eventId.toString(),
+      //   "CANCELLED"
+      // );
+      // await eventRedis.invalidateUserEventsCaches(session.user.id);
+      // await eventRedis.invalidateAttendanceCache(
+      //   eventId.toString(),
+      //   session.user.id
+      // );
 
       return res.status(200).json({ message: "Event cancelled successfully" });
     } catch (error) {
