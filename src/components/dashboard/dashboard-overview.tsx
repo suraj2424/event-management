@@ -54,7 +54,7 @@ export function DashboardOverview() {
   }, []);
 
   const fetchDashboardData = async () => {
-    const url = process.env.VERCEL_URL || "http://localhost:3000";
+    const url = process.env.NEXT_PUBLIC_VERCEL_CLIENT_URL || "http://localhost:3000";
     try {
       const [statsResponse, eventsResponse] = await Promise.all([
         fetch(`${url}/api/dashboard/stats`),

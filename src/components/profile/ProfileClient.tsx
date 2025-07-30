@@ -104,7 +104,7 @@ export default function ProfileClient({
     setLoading(true);
     setError(null);
 
-    const url = process.env.VERCEL_URL || "http://localhost:3000";
+    const url = process.env.NEXT_PUBLIC_VERCEL_CLIENT_URL || "http://localhost:3000";
 
     try {
       const res = await fetch(`${url}/api/profile`, {
@@ -137,7 +137,7 @@ export default function ProfileClient({
     setLoading(true);
     setError(null);
 
-    const url = process.env.VERCEL_URL || "http://localhost:3000";
+    const url = process.env.NEXT_PUBLIC_VERCEL_CLIENT_URL || "http://localhost:3000";
 
 
     try {
@@ -188,7 +188,7 @@ export default function ProfileClient({
 
   const handleCancelAttendance = async (eventId: string) => {
     setLoading(true);
-    const url = process.env.VERCEL_URL || "http://localhost:3000";
+    const url = process.env.NEXT_PUBLIC_VERCEL_CLIENT_URL || "http://localhost:3000";
 
     try {
       const response = await fetch(`${url}/api/events/${eventId}/attendance`, {

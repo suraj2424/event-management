@@ -108,7 +108,7 @@ export function EventForm() {
         });
       }
 
-    const url = process.env.VERCEL_URL || "http://localhost:3000";
+    const url = process.env.NEXT_PUBLIC_VERCEL_CLIENT_URL || "http://localhost:3000";
 
       const response = await fetch(`${url}/api/events`, {
         method: "POST",
