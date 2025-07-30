@@ -59,7 +59,7 @@ export default function ModernSignUpPage() {
   // Submit handler
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsSubmitting(true);
-    const url = process.env.NEXT_PUBLIC_VERCEL_CLIENT_URL || "http://localhost:3000";
+    const url = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
     try {
       const response = await fetch(`${url}/api/auth/signup`, {
         method: "POST",

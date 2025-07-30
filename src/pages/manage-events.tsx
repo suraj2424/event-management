@@ -53,7 +53,7 @@ export default function ManageEvents() {
   }, []);
 
   const fetchEvents = async () => {
-    const url = process.env.NEXT_PUBLIC_VERCEL_CLIENT_URL || "http://localhost:3000";
+    const url = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
 
     try {
       const res = await fetch(`${url}/api/events/manage`);
@@ -68,7 +68,7 @@ export default function ManageEvents() {
   };
 
   const handleDelete = async (id: number) => {
-    const url = process.env.NEXT_PUBLIC_VERCEL_CLIENT_URL || "http://localhost:3000";
+    const url = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
     try {
       const res = await fetch(`${url}/api/profile/events?eventId=${id}`, {
         method: "DELETE",

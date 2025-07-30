@@ -104,8 +104,8 @@ export const getServerSideProps: GetServerSideProps<PageProps> = async ({ query 
     // Dynamic URL based on environment
     const getBaseUrl = () => {
       // Production - use VERCEL_URL or custom domain
-      if (process.env.NEXT_PUBLIC_VERCEL_CLIENT_URL) {
-        return `${process.env.NEXT_PUBLIC_VERCEL_CLIENT_URL}`;
+      if (process.env.NEXT_PUBLIC_API_URL) {
+        return `${process.env.NEXT_PUBLIC_API_URL}`;
       }
       
       // Custom production URL

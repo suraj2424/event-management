@@ -68,7 +68,7 @@ export function UserProfile() {
       setIsSubmitting(true);
       setMessage(null);
 
-    const url = process.env.NEXT_PUBLIC_VERCEL_CLIENT_URL || "http://localhost:3000";
+    const url = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
 
 
       const response = await fetch(`${url}/api/user/profile`, {
