@@ -1,6 +1,6 @@
 // components/events/id/RegistrationButton.tsx
 import React from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter } from 'next/router';
 import { useSession } from 'next-auth/react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -12,6 +12,9 @@ interface RegistrationButtonProps {
   attendance: Attendance | null;
   attendanceLoading: boolean;
   onRegister: () => void;
+  onCancel: () => void;
+  onConfirm: () => void;
+  onMarkAttended: () => void;
   isAuthenticated: boolean;
 }
 
@@ -20,6 +23,9 @@ const RegistrationButton: React.FC<RegistrationButtonProps> = ({
   attendance,
   attendanceLoading,
   onRegister,
+  onCancel,
+  onConfirm,
+  onMarkAttended,
   isAuthenticated,
 }) => {
   const { data: session, status } = useSession();
@@ -64,10 +70,40 @@ const RegistrationButton: React.FC<RegistrationButtonProps> = ({
     // Already registered
     if (attendance?.isRegistered) {
       return (
-        <Button className="w-full" disabled variant="outline">
-          <CheckCircle className="w-4 h-4 mr-2 text-green-600" />
-          Registered
-        </Button>
+        <div className="flex flex-col gap-2">
+          <Button className="w-full" disabled variant="outline">
+            <CheckCircle className="w-4 h-4 mr-2 text-green-600" />
+            Registered
+          </Button>
+          {attendance?.status !== 'CONFIRMED' && (
+            <Button
+              className="w-full"
+              variant="default"
+              onClick={onConfirm}
+              disabled={attendanceLoading}
+            >
+              Confirm Attendance
+            </Button>
+          )}
+          {eventEndDate < now && attendance?.status !== 'ATTENDED' && (
+            <Button
+              className="w-full"
+              variant="secondary"
+              onClick={onMarkAttended}
+              disabled={attendanceLoading}
+            >
+              Mark as Attended
+            </Button>
+          )}
+          <Button
+            className="w-full"
+            variant="destructive"
+            onClick={onCancel}
+            disabled={attendanceLoading}
+          >
+            Cancel Registration
+          </Button>
+        </div>
       );
     }
 

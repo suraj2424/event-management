@@ -87,32 +87,53 @@ export default async function handler(
       }
 
       case "POST": {
-        // Check cache first for existing registration
-        // const isAlreadyRegistered = await eventRedis.isUserRegistered(
-        //   eventId.toString(),
-        //   session.user.id
-        // );
-        // if (isAlreadyRegistered) {
-        //   const cachedAttendance = await eventRedis.getCachedUserAttendance(
-        //     eventId.toString(),
-        //     session.user.id
-        //   );
-        //   if (cachedAttendance) {
-        //     return res.status(400).json({
-        //       message: "Already registered for this event",
-        //       attendance: cachedAttendance,
-        //     });
-        //   }
-        // }
-
-        // Original database logic...
-        const attendance = await prismadb.attendance.create({
-          data: {
-            userId: session.user.id,
-            eventId: eventId,
-            status: "REGISTERED",
+        // Prevent duplicate registration and enforce capacity
+        const existing = await prismadb.attendance.findUnique({
+          where: {
+            userId_eventId: { userId: session.user.id, eventId },
           },
         });
+
+        if (existing && existing.status !== "CANCELLED") {
+          return res
+            .status(400)
+            .json({ message: "Already registered for this event", attendance: existing });
+        }
+
+        // Count active registrations (excluding CANCELLED)
+        const activeCount = await prismadb.attendance.count({
+          where: {
+            eventId,
+            status: { in: ["REGISTERED", "CONFIRMED", "ATTENDED"] },
+          },
+        });
+
+        const eventCapacity = await prismadb.event.findUnique({
+          where: { id: eventId },
+          select: { capacity: true },
+        });
+
+        if (!eventCapacity) {
+          return res.status(404).json({ message: "Event not found" });
+        }
+
+        if (activeCount >= eventCapacity.capacity) {
+          return res.status(409).json({ message: "Event is at full capacity" });
+        }
+
+        // Create or re-activate
+        const attendance = existing
+          ? await prismadb.attendance.update({
+              where: { userId_eventId: { userId: session.user.id, eventId } },
+              data: { status: "REGISTERED" },
+            })
+          : await prismadb.attendance.create({
+              data: {
+                userId: session.user.id,
+                eventId: eventId,
+                status: "REGISTERED",
+              },
+            });
 
         // Update cache after successful registration
         // await eventRedis.cacheUserAttendance(
@@ -128,6 +149,53 @@ export default async function handler(
         return res.status(201).json({
           message: "Successfully registered for event",
           attendance: attendance,
+        });
+      }
+
+      case "PATCH": {
+        // Update attendance status (REGISTERED, CONFIRMED, CANCELLED, ATTENDED)
+        const { status } = req.body as { status?: string };
+        const allowed = ["REGISTERED", "CONFIRMED", "CANCELLED", "ATTENDED"] as const;
+        if (!status || !(allowed as readonly string[]).includes(status)) {
+          return res.status(400).json({ message: "Invalid status" });
+        }
+
+        const existing = await prismadb.attendance.findUnique({
+          where: { userId_eventId: { userId: session.user.id, eventId } },
+        });
+
+        if (!existing) {
+          return res.status(404).json({ message: "Attendance not found" });
+        }
+
+        // If setting to a non-cancelled state, enforce capacity when reviving from CANCELLED
+        if (status !== "CANCELLED" && existing.status === "CANCELLED") {
+          const activeCount = await prismadb.attendance.count({
+            where: {
+              eventId,
+              status: { in: ["REGISTERED", "CONFIRMED", "ATTENDED"] },
+            },
+          });
+          const eventCapacity = await prismadb.event.findUnique({
+            where: { id: eventId },
+            select: { capacity: true },
+          });
+          if (!eventCapacity) {
+            return res.status(404).json({ message: "Event not found" });
+          }
+          if (activeCount >= eventCapacity.capacity) {
+            return res.status(409).json({ message: "Event is at full capacity" });
+          }
+        }
+
+        const updated = await prismadb.attendance.update({
+          where: { userId_eventId: { userId: session.user.id, eventId } },
+          data: { status: status as any },
+        });
+
+        return res.status(200).json({
+          message: "Attendance updated",
+          attendance: updated,
         });
       }
 

@@ -1,7 +1,8 @@
 // components/UserMenu.tsx
 'use client';
 
-import { useRouter } from 'next/navigation';
+import { useRouter } from 'next/router';
+
 import { signOut, useSession } from 'next-auth/react';
 import { User, Settings, LogOut, ChevronDown } from 'lucide-react';
 import { Button } from "@/components/ui/button";

@@ -42,6 +42,10 @@ const EventDetailClient: React.FC<EventDetailClientProps> = ({
     setAttendanceLoading(true);
     setError(null);
 
+    // Optimistic update
+    const prevAttendance = attendance;
+    setAttendance({ isRegistered: true, status: 'REGISTERED' });
+
     const url = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
     
     try {
@@ -54,18 +58,144 @@ const EventDetailClient: React.FC<EventDetailClientProps> = ({
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
+        // Roll back optimistic update
+        setAttendance(prevAttendance);
+        if ((response as any).status === 409) {
+          throw new Error(errorData.message || 'Event is at full capacity');
+        }
         throw new Error(errorData.message || 'Failed to register for event');
       }
 
-      const newAttendance = await response.json();
-      setAttendance({
-        isRegistered: true,
-        status: newAttendance.status || 'registered'
-      });
+      const data = await response.json();
+      const att = data?.attendance;
+      setAttendance(att
+        ? { isRegistered: true, status: att.status || 'REGISTERED' }
+        : { isRegistered: true, status: 'REGISTERED' }
+      );
       
       toast.success('Successfully registered for event!');
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to register for event';
+      setError(errorMessage);
+      toast.error(errorMessage);
+    } finally {
+      setAttendanceLoading(false);
+    }
+  };
+
+  const handleMarkAttended = async () => {
+    if (!session) return;
+
+    setAttendanceLoading(true);
+    setError(null);
+
+    // Optimistic update
+    const prevAttendance = attendance;
+    setAttendance({ isRegistered: true, status: 'ATTENDED' });
+
+    const url = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
+
+    try {
+      const response = await fetch(`${url}/api/events/${eventId}/attendance`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'ATTENDED' }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        // Roll back
+        setAttendance(prevAttendance);
+        throw new Error(errorData.message || 'Failed to mark attendance');
+      }
+
+      const data = await response.json();
+      const att = data?.attendance;
+      setAttendance(att
+        ? { isRegistered: true, status: att.status || 'ATTENDED' }
+        : { isRegistered: true, status: 'ATTENDED' }
+      );
+      toast.success('Marked as attended');
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to mark attendance';
+      setError(errorMessage);
+      toast.error(errorMessage);
+    } finally {
+      setAttendanceLoading(false);
+    }
+  };
+
+  const handleConfirm = async () => {
+    if (!session) return;
+
+    setAttendanceLoading(true);
+    setError(null);
+
+    // Optimistic update
+    const prevAttendance = attendance;
+    setAttendance({ isRegistered: true, status: 'CONFIRMED' });
+
+    const url = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
+
+    try {
+      const response = await fetch(`${url}/api/events/${eventId}/attendance`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'CONFIRMED' }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        // Roll back
+        setAttendance(prevAttendance);
+        throw new Error(errorData.message || 'Failed to confirm attendance');
+      }
+
+      const data = await response.json();
+      const att = data?.attendance;
+      setAttendance(att
+        ? { isRegistered: true, status: att.status || 'CONFIRMED' }
+        : { isRegistered: true, status: 'CONFIRMED' }
+      );
+      toast.success('Attendance confirmed');
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to confirm attendance';
+      setError(errorMessage);
+      toast.error(errorMessage);
+    } finally {
+      setAttendanceLoading(false);
+    }
+  };
+
+  const handleCancel = async () => {
+    if (!session) return;
+
+    setAttendanceLoading(true);
+    setError(null);
+
+    // Optimistic update
+    const prevAttendance = attendance;
+    setAttendance(null);
+
+    const url = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
+
+    try {
+      const response = await fetch(`${url}/api/events/${eventId}/attendance`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        // Roll back
+        setAttendance(prevAttendance);
+        throw new Error(errorData.message || 'Failed to cancel registration');
+      }
+
+      // Clear local attendance state
+      setAttendance(null);
+      toast.success('Registration cancelled');
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to cancel registration';
       setError(errorMessage);
       toast.error(errorMessage);
     } finally {
@@ -99,6 +229,9 @@ const EventDetailClient: React.FC<EventDetailClientProps> = ({
                 attendance={attendance}
                 attendanceLoading={attendanceLoading}
                 onRegister={handleRegister}
+                onCancel={handleCancel}
+                onConfirm={handleConfirm}
+                onMarkAttended={handleMarkAttended}
                 isAuthenticated={isAuthenticated}
               />
             </div>

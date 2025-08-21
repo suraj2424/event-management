@@ -188,17 +188,19 @@ router.post(async (req, res) => {
 router.get(async (req, res) => {
   try {
     const page = parseInt(req.query.page as string) || 1;
-    const limit = parseInt(req.query.limit as string) || 2;
+    const limit = parseInt(req.query.limit as string) || 9;
     const skip = (page - 1) * limit;
     const eventType = (req.query.type as string) || "all";
+    const search = (req.query.search as string)?.trim() || "";
 
     const currentDate = new Date();
 
     // Define filter based on event type
     let filter:
-      | { AND?: Array<{ startDate?: { lte: Date }; endDate?: { gte: Date } }> }
-      | { startDate?: { gt: Date } }
-      | { endDate?: { lt: Date } } = {};
+      | { AND?: Array<{ startDate?: { lte: Date }; endDate?: { gte: Date } }>; OR?: any[] }
+      | { startDate?: { gt: Date }; OR?: any[] }
+      | { endDate?: { lt: Date }; OR?: any[] }
+      | { OR?: any[] } = {};
     switch (eventType) {
       case "upcoming":
         filter = { startDate: { gt: currentDate } };
@@ -215,6 +217,21 @@ router.get(async (req, res) => {
         filter = { endDate: { lt: currentDate } };
         break;
       // 'all' doesn't need a filter
+    }
+
+    // Apply search filter (title, description, location, hostName)
+    if (search) {
+      const or = [
+        { title: { contains: search, mode: 'insensitive' as const } },
+        { description: { contains: search, mode: 'insensitive' as const } },
+        { location: { contains: search, mode: 'insensitive' as const } },
+        { hostName: { contains: search, mode: 'insensitive' as const } },
+      ];
+      if ('AND' in filter || 'startDate' in filter || 'endDate' in filter) {
+        (filter as any).OR = or;
+      } else {
+        filter = { OR: or };
+      }
     }
 
     // const cacheKey = { page, limit, type: eventType };

@@ -2,12 +2,13 @@
 'use client';
 
 import React, { useState, useMemo, useEffect } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/router';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Filter, X } from 'lucide-react';
+
 import EventsPageHeader from './EventsPageHeader';
 import EventsSearch from './EventsSearch';
 import EventsFilters from './EventFilters';
@@ -25,7 +26,7 @@ const EventsClient: React.FC<EventsClientProps> = ({
   initialEventType,
   initialSearchTerm = ''
 }) => {
-  const searchParams = useSearchParams();
+  const router = useRouter();
   
   // State management
   const [searchTerm, setSearchTerm] = useState(initialSearchTerm);
@@ -36,16 +37,33 @@ const EventsClient: React.FC<EventsClientProps> = ({
 
   const eventsPerPage = 9;
 
-  // Sync URL params with state
+  // Sync URL params with state (Pages Router)
   useEffect(() => {
-    const urlEventType = searchParams?.get('type') as EventType || 'all';
-    const urlPage = parseInt(searchParams?.get('page') || '1');
-    const urlSearch = searchParams?.get('search') || '';
+    if (!router.isReady) return;
+    const { type, page, search } = router.query;
 
-    setEventType(urlEventType);
-    setCurrentPage(urlPage);
+    const urlEventType = (typeof type === 'string' ? type : 'all') as EventType;
+    const urlPage = parseInt(typeof page === 'string' ? page : '1');
+    const urlSearch = typeof search === 'string' ? search : '';
+
+    setEventType(urlEventType || 'all');
+    setCurrentPage(Number.isFinite(urlPage) && urlPage > 0 ? urlPage : 1);
     setSearchTerm(urlSearch);
-  }, [searchParams]);
+  }, [router.isReady, router.query]);
+
+  // Global route change loading states
+  useEffect(() => {
+    const handleStart = () => setIsLoading(true);
+    const handleDone = () => setIsLoading(false);
+    router.events.on('routeChangeStart', handleStart);
+    router.events.on('routeChangeComplete', handleDone);
+    router.events.on('routeChangeError', handleDone);
+    return () => {
+      router.events.off('routeChangeStart', handleStart);
+      router.events.off('routeChangeComplete', handleDone);
+      router.events.off('routeChangeError', handleDone);
+    };
+  }, [router.events]);
 
   // Filter events based on search term
   const filteredEvents = useMemo(() => {
@@ -95,47 +113,40 @@ const EventsClient: React.FC<EventsClientProps> = ({
   };
 
   const handleSearch = (term: string) => {
-    setIsLoading(true);
-    
-    const params = new URLSearchParams();
-    params.set('type', eventType);
-    params.set('page', '1');
+    const query: Record<string, string> = {
+      type: eventType,
+      page: '1',
+    };
     if (term.trim()) {
-      params.set('search', term);
+      query.search = term.trim();
     }
-    
-    window.location.href = `/events?${params.toString()}`;
+    router.push({ pathname: '/events', query });
   };
 
   const handleEventTypeChange = (type: EventType) => {
     if (type !== eventType) {
-      setIsLoading(true);
-      
-      const params = new URLSearchParams();
-      params.set('type', type);
-      params.set('page', '1');
+      const query: Record<string, string> = {
+        type,
+        page: '1',
+      };
       if (searchTerm.trim()) {
-        params.set('search', searchTerm);
+        query.search = searchTerm.trim();
       }
-      
-      window.location.href = `/events?${params.toString()}`;
+      router.push({ pathname: '/events', query });
     }
     setIsMobileFiltersOpen(false);
   };
 
   const handlePageChange = (newPage: number) => {
     if (newPage === currentPage) return;
-    
-    setIsLoading(true);
-    
-    const params = new URLSearchParams();
-    params.set('type', eventType);
-    params.set('page', newPage.toString());
+    const query: Record<string, string> = {
+      type: eventType,
+      page: String(newPage),
+    };
     if (searchTerm.trim()) {
-      params.set('search', searchTerm);
+      query.search = searchTerm.trim();
     }
-    
-    window.location.href = `/events?${params.toString()}`;
+    router.push({ pathname: '/events', query });
   };
 
   const handleClearSearch = () => {

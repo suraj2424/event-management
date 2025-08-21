@@ -1,6 +1,6 @@
 import React from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter } from 'next/router';
 import { useSession } from 'next-auth/react';
 import { Button } from "@/components/ui/button";
 import { ChevronLeft } from 'lucide-react';
