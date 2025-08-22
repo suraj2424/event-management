@@ -126,9 +126,21 @@ export function Sidebar({ userRole, onNavigate }: SidebarProps) {
   const router = useRouter();
   const roleBasedItems = navigationItems[userRole] || [];
 
-  const isActive = (href: string) => {
-    return router.pathname === href || router.pathname.startsWith(href + "/");
-  };
+  // Determine a single active href using the longest-matching rule.
+  const allItems = [...roleBasedItems, ...commonItems];
+  const pathname = router.pathname;
+  const activeHref = React.useMemo(() => {
+    const matches = allItems
+      .map((i) => i.href)
+      .filter((href) => {
+        if (href === "/dashboard") return pathname === "/dashboard"; // exact only
+        return pathname === href || pathname.startsWith(href + "/");
+      })
+      .sort((a, b) => b.length - a.length); // longest match wins
+    return matches[0] || "";
+  }, [pathname, allItems]);
+
+  const isActive = (href: string) => href === activeHref;
 
   return (
     <div className="flex h-full flex-col bg-card">
@@ -151,8 +163,7 @@ export function Sidebar({ userRole, onNavigate }: SidebarProps) {
                   key={item.href}
                   variant={isActive(item.href) ? "secondary" : "ghost"}
                   className={cn(
-                    "w-full justify-start",
-                    isActive(item.href) && "bg-secondary"
+                    "w-full justify-start"
                   )}
                   asChild
                   onClick={onNavigate}
@@ -177,8 +188,7 @@ export function Sidebar({ userRole, onNavigate }: SidebarProps) {
                   key={item.href}
                   variant={isActive(item.href) ? "secondary" : "ghost"}
                   className={cn(
-                    "w-full justify-start",
-                    isActive(item.href) && "bg-secondary"
+                    "w-full justify-start"
                   )}
                   asChild
                   onClick={onNavigate}

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -55,7 +55,6 @@ interface Event {
   capacity: number;
   attendeeCount: number;
   status: EventStatus;
-  createdAt: string;
 }
 
 export function EventsManagement() {
@@ -73,10 +72,11 @@ export function EventsManagement() {
   const fetchEvents = async () => {
     const url = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
     try {
-      const response = await fetch(`${url}/api/events/my-events`);
+      const response = await fetch(`${url}/api/events/manage`);
       if (response.ok) {
         const data = await response.json();
-        setEvents(data.events);
+        // manage returns { events, pagination }
+        setEvents(data.events as Event[]);
       }
     } catch (error) {
       console.error("Failed to fetch events:", error);
@@ -88,7 +88,7 @@ export function EventsManagement() {
   const handleDeleteEvent = async (eventId: string) => {
     const url = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
     try {
-      const response = await fetch(`${url}/api/events/${eventId}`, {
+      const response = await fetch(`${url}/api/events/manage?id=${encodeURIComponent(eventId)}`, {
         method: "DELETE",
       });
       if (response.ok) {
@@ -331,7 +331,7 @@ export function EventsManagement() {
                     </div>
                     
                     <div className="flex items-center gap-2">
-                      <Button variant="outline" size="sm" asChild>
+                      <Button asChild className={buttonVariants({ variant: "outline", size: "sm" })}>
                         <Link href={`/events/${event.id}`}>
                           <Eye className="h-4 w-4 mr-1" />
                           View
@@ -340,7 +340,7 @@ export function EventsManagement() {
                       
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="sm">
+                          <Button className={buttonVariants({ variant: "ghost", size: "sm" })}>
                             <MoreHorizontal className="h-4 w-4" />
                           </Button>
                         </DropdownMenuTrigger>

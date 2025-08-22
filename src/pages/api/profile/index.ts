@@ -28,9 +28,12 @@ export default async function handler(
       const user = await prismadb.user.findUnique({
         where: { id: session.user.id },
         select: {
+          id: true,
           name: true,
           email: true,
           role: true,
+          createdAt: true,
+          updatedAt: true,
         },
       });
 
@@ -43,7 +46,53 @@ export default async function handler(
       // await eventRedis.cacheUserProfile(session.user.id, user);
       // await eventRedis.cacheUserExists(session.user.id, true);
 
-      return res.status(200).json(user);
+      // Compute real-time stats based on current prisma schema
+      const now = new Date();
+
+      // Organizer stats
+      const [eventsCreated, totalAttendees] = await Promise.all([
+        prismadb.event.count({
+          where: { organizerId: session.user.id },
+        }),
+        prismadb.attendance.count({
+          where: {
+            event: { organizerId: session.user.id },
+          },
+        }),
+      ]);
+
+      // Attendee stats
+      const [eventsAttended, upcomingEvents] = await Promise.all([
+        prismadb.attendance.count({
+          where: {
+            userId: session.user.id,
+            status: { in: ["REGISTERED", "CONFIRMED", "ATTENDED"] },
+          },
+        }),
+        prismadb.attendance.count({
+          where: {
+            userId: session.user.id,
+            status: { in: ["REGISTERED", "CONFIRMED"] },
+            event: { startDate: { gt: now } },
+          },
+        }),
+      ]);
+
+      const payload = {
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        createdAt: user.createdAt,
+        updatedAt: user.updatedAt,
+        stats: {
+          eventsCreated,
+          totalAttendees,
+          eventsAttended,
+          upcomingEvents,
+        },
+      };
+
+      return res.status(200).json(payload);
     } catch (error) {
       console.error("Profile fetch error:", error);
       return res.status(500).json({ message: "Internal server error" });

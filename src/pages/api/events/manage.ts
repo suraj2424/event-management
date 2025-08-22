@@ -1,5 +1,6 @@
 // pages/api/events/manage.ts
 import { NextApiRequest, NextApiResponse } from "next";
+import type { Prisma } from "@prisma/client";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "../auth/[...nextauth]";
 import prismadb from "@/providers/prismaclient";
@@ -39,24 +40,63 @@ export default async function handler(
       const { page = 1, limit = 10 } = req.query;
       const skip = (Number(page) - 1) * Number(limit);
 
-      const events = await prismadb.event.findMany({
+      const now = new Date();
+      const activeStatuses = ["REGISTERED", "CONFIRMED", "ATTENDED"] as const;
+
+      const baseEvents = await prismadb.event.findMany({
         where: { organizerId: session.user.id },
         skip,
         take: Number(limit),
-        orderBy: { id: "desc" },
+        orderBy: { startDate: "desc" },
         select: {
           id: true,
           title: true,
+          description: true,
           startDate: true,
           endDate: true,
           location: true,
           capacity: true,
-          logo: true
-        }
+        },
       });
 
+      type BaseEvent = {
+        id: number;
+        title: string;
+        description: string | null;
+        startDate: Date | string;
+        endDate: Date | string;
+        location: string;
+        capacity: number;
+      };
+
+      const events = await Promise.all(
+        baseEvents.map(async (ev: BaseEvent) => {
+          const attendeeCount = await prismadb.attendance.count({
+            where: { eventId: ev.id, status: { in: activeStatuses as any } },
+          });
+
+          let status: "UPCOMING" | "ONGOING" | "PAST" = "UPCOMING";
+          const start = new Date(ev.startDate);
+          const end = new Date(ev.endDate);
+          if (now > end) status = "PAST";
+          else if (now >= start && now <= end) status = "ONGOING";
+
+          return {
+            id: String(ev.id),
+            title: ev.title,
+            description: ev.description,
+            startDate: ev.startDate as unknown as string,
+            endDate: ev.endDate as unknown as string,
+            location: ev.location,
+            capacity: ev.capacity,
+            attendeeCount,
+            status,
+          };
+        })
+      );
+
       const total = await prismadb.event.count({
-        where: { organizerId: session.user.id }
+        where: { organizerId: session.user.id },
       });
 
       return res.status(200).json({
@@ -65,8 +105,8 @@ export default async function handler(
           total,
           pages: Math.ceil(total / Number(limit)),
           page: Number(page),
-          limit: Number(limit)
-        }
+          limit: Number(limit),
+        },
       });
     }
 
@@ -121,8 +161,15 @@ export default async function handler(
         return res.status(404).json({ message: "Event not found" });
       }
 
-      await prismadb.event.delete({
-        where: { id: Number(id) }
+      const eventIdNum = Number(id);
+
+      await prismadb.$transaction(async (tx: Prisma.TransactionClient) => {
+        await tx.specialGuest.deleteMany({ where: { eventId: eventIdNum } });
+        if (event.socialLinksId) {
+          await tx.socialLinks.delete({ where: { id: event.socialLinksId } });
+        }
+        await tx.attendance.deleteMany({ where: { eventId: eventIdNum } });
+        await tx.event.delete({ where: { id: eventIdNum } });
       });
 
       return res.status(200).json({ message: "Event deleted successfully" });

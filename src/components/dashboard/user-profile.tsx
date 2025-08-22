@@ -1,11 +1,11 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
+
 import { useSession } from "next-auth/react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -18,25 +18,12 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Camera, Save, User, CheckCircle, AlertCircle } from "lucide-react";
+import { Camera, Save, CheckCircle, AlertCircle } from "lucide-react";
 import { CustomSession, UserRole } from "../event-form/types/event";
 
 const profileSchema = z.object({
   name: z.string().min(1, "Name is required"),
   email: z.string().email("Invalid email address"),
-  bio: z.string().optional(),
-  phone: z.string().optional(),
-  location: z.string().optional(),
-  website: z.string().url().optional().or(z.literal("")),
-  company: z.string().optional(),
-  timezone: z.string().optional(),
 });
 
 type ProfileFormValues = z.infer<typeof profileSchema>;
@@ -46,20 +33,28 @@ export function UserProfile() {
     data: CustomSession | null;
     update: any;
   };
-    const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const [loadingProfile, setLoadingProfile] = useState(true);
+  const [profile, setProfile] = useState<{
+    name: string;
+    email: string;
+    role: UserRole;
+    createdAt?: string;
+    updatedAt?: string;
+    stats?: {
+      eventsCreated: number;
+      totalAttendees: number;
+      eventsAttended: number;
+      upcomingEvents: number;
+    };
+  } | null>(null);
 
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileSchema),
     defaultValues: {
       name: session?.user?.name || "",
       email: session?.user?.email || "",
-      bio: "",
-      phone: "",
-      location: "",
-      website: "",
-      company: "",
-      timezone: "UTC",
     },
   });
 
@@ -68,8 +63,7 @@ export function UserProfile() {
       setIsSubmitting(true);
       setMessage(null);
 
-    const url = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
-
+      const url = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
 
       const response = await fetch(`${url}/api/user/profile`, {
         method: "PUT",
@@ -94,15 +88,43 @@ export function UserProfile() {
       });
 
       setMessage({ type: "success", text: "Profile updated successfully!" });
+      // Refresh profile info after update
+      await fetchProfile();
     } catch (error) {
-      setMessage({ 
-        type: "error", 
-        text: error instanceof Error ? error.message : "Failed to update profile" 
-      });
+      setMessage({ type: "error", text: error instanceof Error ? error.message : "Failed to update profile" });
     } finally {
       setIsSubmitting(false);
     }
   };
+
+  const fetchProfile = async () => {
+    try {
+      setLoadingProfile(true);
+      const url = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
+      const res = await fetch(`${url}/api/user/profile`, { method: "GET" });
+      if (!res.ok) throw new Error("Failed to load profile");
+      const data = await res.json();
+      setProfile(data);
+      // Reset form with fetched values (fallback to session if missing)
+      form.reset({
+        name: data?.name ?? session?.user?.name ?? "",
+        email: data?.email ?? session?.user?.email ?? "",
+      });
+    } catch (e) {
+      // Surface error but don't break the page
+      setMessage({ type: "error", text: e instanceof Error ? e.message : "Failed to load profile" });
+    } finally {
+      setLoadingProfile(false);
+    }
+  };
+
+  useEffect(() => {
+    // Fetch once session is available
+    if (session) {
+      fetchProfile();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session?.user?.id]);
 
   const getInitials = (name: string | null | undefined) => {
     if (!name) return "U";
@@ -119,22 +141,22 @@ export function UserProfile() {
       case UserRole.ADMIN:
         return {
           color: "bg-red-100 text-red-800 border-red-200",
-          label: "Administrator"
+          label: "Administrator",
         };
       case UserRole.ORGANIZER:
         return {
           color: "bg-blue-100 text-blue-800 border-blue-200",
-          label: "Event Organizer"
+          label: "Event Organizer",
         };
       case UserRole.ATTENDEE:
         return {
           color: "bg-green-100 text-green-800 border-green-200",
-          label: "Attendee"
+          label: "Attendee",
         };
       default:
         return {
           color: "bg-gray-100 text-gray-800 border-gray-200",
-          label: "User"
+          label: "User",
         };
     }
   };
@@ -188,10 +210,10 @@ export function UserProfile() {
                   <Camera className="h-4 w-4" />
                 </Button>
               </div>
-              
+
               <div className="text-center space-y-2">
-                <h3 className="text-lg font-semibold">{session.user.name}</h3>
-                <p className="text-sm text-muted-foreground">{session.user.email}</p>
+                <h3 className="text-lg font-semibold">{profile?.name ?? session.user.name}</h3>
+                <p className="text-sm text-muted-foreground">{profile?.email ?? session.user.email}</p>
                 <Badge className={`${roleConfig.color} border`}>
                   {roleConfig.label}
                 </Badge>
@@ -201,21 +223,21 @@ export function UserProfile() {
             <div className="space-y-3 text-sm">
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Member since</span>
-                <span>Jan 2024</span>
+                <span>{profile?.createdAt ? new Date(profile.createdAt).toLocaleDateString() : "-"}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Last login</span>
-                <span>Today</span>
+                <span className="text-muted-foreground">Last activity</span>
+                <span>{profile?.updatedAt ? new Date(profile.updatedAt).toLocaleDateString() : "-"}</span>
               </div>
               {session.user.role === UserRole.ORGANIZER && (
                 <>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Events created</span>
-                    <span>12</span>
+                    <span>{loadingProfile ? "-" : profile?.stats?.eventsCreated ?? 0}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Total attendees</span>
-                    <span>1,234</span>
+                    <span>{loadingProfile ? "-" : profile?.stats?.totalAttendees ?? 0}</span>
                   </div>
                 </>
               )}
@@ -223,11 +245,11 @@ export function UserProfile() {
                 <>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Events attended</span>
-                    <span>8</span>
+                    <span>{loadingProfile ? "-" : profile?.stats?.eventsAttended ?? 0}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Upcoming events</span>
-                    <span>3</span>
+                    <span>{loadingProfile ? "-" : profile?.stats?.upcomingEvents ?? 0}</span>
                   </div>
                 </>
               )}
@@ -275,115 +297,6 @@ export function UserProfile() {
                     )}
                   />
                 </div>
-
-                <FormField
-                  control={form.control}
-                  name="bio"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Bio</FormLabel>
-                      <FormControl>
-                        <Textarea
-                          placeholder="Tell us about yourself..."
-                          className="min-h-[100px]"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <FormField
-                    control={form.control}
-                    name="phone"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Phone Number</FormLabel>
-                        <FormControl>
-                          <Input placeholder="+1 (555) 123-4567" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="location"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Location</FormLabel>
-                        <FormControl>
-                          <Input placeholder="City, Country" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <FormField
-                    control={form.control}
-                    name="website"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Website</FormLabel>
-                        <FormControl>
-                          <Input 
-                            placeholder="https://yourwebsite.com" 
-                            {...field} 
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="company"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Company</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Your company name" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-
-                <FormField
-                  control={form.control}
-                  name="timezone"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Timezone</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select your timezone" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="UTC">UTC</SelectItem>
-                          <SelectItem value="America/New_York">Eastern Time</SelectItem>
-                          <SelectItem value="America/Chicago">Central Time</SelectItem>
-                          <SelectItem value="America/Denver">Mountain Time</SelectItem>
-                          <SelectItem value="America/Los_Angeles">Pacific Time</SelectItem>
-                          <SelectItem value="Europe/London">London</SelectItem>
-                          <SelectItem value="Europe/Paris">Paris</SelectItem>
-                          <SelectItem value="Asia/Tokyo">Tokyo</SelectItem>
-                          <SelectItem value="Asia/Shanghai">Shanghai</SelectItem>
-                          <SelectItem value="Australia/Sydney">Sydney</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
 
                 <div className="flex justify-end">
                   <Button type="submit" disabled={isSubmitting}>
