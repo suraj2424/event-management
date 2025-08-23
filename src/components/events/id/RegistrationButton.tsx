@@ -4,8 +4,9 @@ import { useRouter } from 'next/router';
 import { useSession } from 'next-auth/react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { CheckCircle, Loader2 } from 'lucide-react';
+import { CheckCircle, Loader2, CreditCard, Ticket } from 'lucide-react';
 import { Event, Attendance } from './types';
+import PurchaseButton from '@/components/tickets/PurchaseButton';
 
 interface RegistrationButtonProps {
   event: Event;
@@ -107,8 +108,22 @@ const RegistrationButton: React.FC<RegistrationButtonProps> = ({
       );
     }
 
-    // Can register
+    // Can register - check if event has a price
     const isOngoing = eventStartDate <= now && eventEndDate >= now;
+    const hasPrice = event.price && event.price > 0;
+    
+    if (hasPrice) {
+      return (
+        <PurchaseButton
+          eventId={parseInt(event.id)}
+          price={event.price!}
+          currency={event.currency || 'USD'}
+          eventTitle={event.title}
+          disabled={attendanceLoading}
+        />
+      );
+    }
+    
     return (
       <Button 
         className="w-full" 
@@ -116,7 +131,7 @@ const RegistrationButton: React.FC<RegistrationButtonProps> = ({
         disabled={attendanceLoading}
       >
         {attendanceLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-        {isOngoing ? 'Join Ongoing Event' : 'Register for Event'}
+        {isOngoing ? 'Join Ongoing Event' : 'Register for Free'}
       </Button>
     );
   };

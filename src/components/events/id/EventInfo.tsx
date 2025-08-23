@@ -39,6 +39,19 @@ const EventInfo: React.FC<EventInfoProps> = ({
     }
   };
 
+  const formatPrice = (price?: number, currency: string = 'USD') => {
+    if (price == null || price <= 0) return 'Free';
+    try {
+      return new Intl.NumberFormat(undefined, {
+        style: 'currency',
+        currency,
+        maximumFractionDigits: 2,
+      }).format(price);
+    } catch {
+      return `${price} ${currency}`;
+    }
+  };
+
   const links = [
     {
       platform: 'Facebook',
@@ -99,6 +112,11 @@ const EventInfo: React.FC<EventInfoProps> = ({
       icon: Users,
       label: "Capacity",
       value: `${event.capacity?.toLocaleString() || "TBA"} attendees`,
+    },
+    {
+      icon: Star,
+      label: "Price",
+      value: formatPrice(event.price, event.currency || 'USD'),
     },
   ];
 

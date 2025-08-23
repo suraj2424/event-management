@@ -26,6 +26,8 @@ export interface Event {
   contactPhone: string;
   hostName: string;
   hostDescription: string;
+  price?: number;
+  currency?: string;
   organizer: { name: string; email: string };
 }
 

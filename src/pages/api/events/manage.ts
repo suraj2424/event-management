@@ -16,7 +16,9 @@ const updateEventSchema = z.object({
   contactEmail: z.string().email().optional(),
   contactPhone: z.string().optional(),
   hostName: z.string().optional(),
-  hostDescription: z.string().optional()
+  hostDescription: z.string().optional(),
+  price: z.coerce.number().min(0).optional(),
+  currency: z.string().length(3).optional(),
 });
 
 export default async function handler(
@@ -35,8 +37,35 @@ export default async function handler(
   }
 
   try {
-    // GET events created by user
+    // GET events created by user (single or list)
     if (req.method === "GET") {
+      const { id } = req.query as { id?: string };
+      // Single event for edit page
+      if (id) {
+        const event = await prismadb.event.findFirst({
+          where: { id: Number(id), organizerId: session.user.id },
+          select: {
+            id: true,
+            title: true,
+            description: true,
+            startDate: true,
+            endDate: true,
+            location: true,
+            capacity: true,
+            contactEmail: true,
+            contactPhone: true,
+            hostName: true,
+            hostDescription: true,
+            price: true,
+            currency: true,
+            logo: true,
+            photos: true,
+          },
+        });
+        if (!event) return res.status(404).json({ message: "Event not found" });
+        return res.status(200).json({ event });
+      }
+
       const { page = 1, limit = 10 } = req.query;
       const skip = (Number(page) - 1) * Number(limit);
 

@@ -2,7 +2,20 @@ import { NextApiRequest, NextApiResponse } from "next";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/pages/api/auth/[...nextauth]";
 import prismadb from "@/providers/prismaclient";
+import QRCode from "qrcode";
 // import { eventRedis } from "@/lib/redis";
+
+// Helpers to generate ticket number and QR code (mirrors payments webhook logic)
+const generateTicketNumber = (): string => {
+  const timestamp = Date.now().toString(36);
+  const random = Math.random().toString(36).substr(2, 5);
+  return `TKT-${timestamp}-${random}`.toUpperCase();
+};
+
+const generateQRCode = async (ticketId: string, eventId: number): Promise<string> => {
+  const qrData = JSON.stringify({ ticketId, eventId, timestamp: Date.now() });
+  return await QRCode.toDataURL(qrData);
+};
 
 export default async function handler(
   req: NextApiRequest,
@@ -108,16 +121,17 @@ export default async function handler(
           },
         });
 
-        const eventCapacity = await prismadb.event.findUnique({
+        // Fetch capacity and pricing to decide free vs paid
+        const eventData = await prismadb.event.findUnique({
           where: { id: eventId },
-          select: { capacity: true },
+          select: { capacity: true, price: true, currency: true },
         });
 
-        if (!eventCapacity) {
+        if (!eventData) {
           return res.status(404).json({ message: "Event not found" });
         }
 
-        if (activeCount >= eventCapacity.capacity) {
+        if (activeCount >= eventData.capacity) {
           return res.status(409).json({ message: "Event is at full capacity" });
         }
 
@@ -134,6 +148,34 @@ export default async function handler(
                 status: "REGISTERED",
               },
             });
+
+        // If the event is free (no price or price <= 0), create a ticket immediately
+        const isFreeEvent = eventData.price == null || eventData.price <= 0;
+        if (isFreeEvent) {
+          // Avoid duplicate tickets for the same user-event
+          const existingTicket = await prismadb.ticket.findFirst({
+            where: { userId: session.user.id, eventId },
+          });
+
+          if (!existingTicket) {
+            const ticketNumber = generateTicketNumber();
+            const newTicket = await prismadb.ticket.create({
+              data: {
+                ticketNumber,
+                userId: session.user.id,
+                eventId,
+                status: "ACTIVE",
+              },
+            });
+
+            // Generate and attach QR code
+            const qrCode = await generateQRCode(newTicket.id, eventId);
+            await prismadb.ticket.update({
+              where: { id: newTicket.id },
+              data: { qrCode },
+            });
+          }
+        }
 
         // Update cache after successful registration
         // await eventRedis.cacheUserAttendance(

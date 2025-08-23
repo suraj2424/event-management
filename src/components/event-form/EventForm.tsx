@@ -42,6 +42,8 @@ export function EventForm() {
       endDate: new Date(new Date().setDate(new Date().getDate() + 1)),
       location: "",
       capacity: 1,
+      price: 0,
+      currency: "USD",
       contactEmail: "",
       contactPhone: "",
       socialLinks: {
@@ -222,6 +224,42 @@ export function EventForm() {
                           placeholder="Event capacity"
                           {...field}
                         />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              {/* Pricing Section */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <FormField
+                  control={form.control}
+                  name="price"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Ticket Price (0 for free event)</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          placeholder="0.00"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="currency"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Currency</FormLabel>
+                      <FormControl>
+                        <Input placeholder="USD" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>

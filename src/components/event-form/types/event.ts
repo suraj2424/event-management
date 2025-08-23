@@ -8,6 +8,8 @@ export const eventSchema = z.object({
   endDate: z.date({ required_error: "End date is required" }),
   location: z.string().min(1, "Location is required"),
   capacity: z.coerce.number().int().positive("Capacity must be a positive integer"),
+  price: z.coerce.number().min(0, "Price must be 0 or greater").optional(),
+  currency: z.string().default("USD"),
   logo: z.any().optional(),
   photos: z.any().optional(),
   contactEmail: z.string().email("Invalid email address"),

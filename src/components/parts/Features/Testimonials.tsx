@@ -3,7 +3,6 @@ import React, { forwardRef } from 'react';
 import { Star, Quote } from 'lucide-react';
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 const Testimonials = forwardRef<HTMLDivElement>((props, ref) => {
   const testimonials = [
@@ -11,7 +10,6 @@ const Testimonials = forwardRef<HTMLDivElement>((props, ref) => {
       name: "Emily Johnson",
       role: "Event Planner",
       quote: "Evenzia has revolutionized how I handle events. The registration process is incredibly smooth, and the analytics tools provide invaluable insights that help me improve every event.",
-      avatar: "/avatars/emily.jpg",
       initials: "EJ",
       rating: 5,
     },
@@ -19,7 +17,6 @@ const Testimonials = forwardRef<HTMLDivElement>((props, ref) => {
       name: "Michael Torres",
       role: "Conference Organizer",
       quote: "The advanced features offered by Evenzia allowed us to scale our annual conference effortlessly. Attendee feedback was overwhelmingly positive and management was seamless.",
-      avatar: "/avatars/michael.jpg",
       initials: "MT",
       rating: 5,
     },
@@ -27,7 +24,6 @@ const Testimonials = forwardRef<HTMLDivElement>((props, ref) => {
       name: "Sarah Lee",
       role: "Marketing Director",
       quote: "I was amazed at how easy it was to find and register for events that matched my interests. The user-friendly interface made everything straightforward and enjoyable.",
-      avatar: "/avatars/sarah.jpg",
       initials: "SL",
       rating: 5,
     },
@@ -94,16 +90,11 @@ const Testimonials = forwardRef<HTMLDivElement>((props, ref) => {
 
                 {/* Author */}
                 <div className="flex items-center mt-auto">
-                  <Avatar className="w-12 h-12 mr-4">
-                    <AvatarImage 
-                      src={testimonial.avatar} 
-                      alt={testimonial.name}
-                    />
-                    <AvatarFallback className="bg-muted text-muted-foreground font-medium">
+                  <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center mr-4">
+                    <span className="text-muted-foreground font-medium">
                       {testimonial.initials}
-                    </AvatarFallback>
-                  </Avatar>
-                  
+                    </span>
+                  </div>
                   <div>
                     <div className="font-semibold text-foreground text-sm">
                       {testimonial.name}

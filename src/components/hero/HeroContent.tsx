@@ -2,7 +2,7 @@
 import React from 'react';
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowRight, Play } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 const HeroContent: React.FC = () => {
@@ -30,7 +30,7 @@ const HeroContent: React.FC = () => {
         </div>
       </div>
 
-      <div className="flex flex-col sm:flex-row gap-3">
+      <div className="flex">
         <Button
           size="lg"
           className="group h-12 px-8"
@@ -38,15 +38,6 @@ const HeroContent: React.FC = () => {
         >
           Get Started
           <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
-        </Button>
-
-        <Button
-          variant="outline"
-          size="lg"
-          className="h-12 px-8"
-        >
-          <Play className="mr-2 h-4 w-4" />
-          Watch Demo
         </Button>
       </div>
 

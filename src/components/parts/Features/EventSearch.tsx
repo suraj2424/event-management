@@ -230,24 +230,6 @@ const EventSearch = () => {
           </div>
         </div>
 
-        {/* Stats */}
-        <div className="mt-12 grid grid-cols-2 md:grid-cols-4 gap-6 stats-grid">
-          {[
-            { number: '10K+', label: 'Events' },
-            { number: '50+', label: 'Cities' },
-            { number: '100K+', label: 'Attendees' },
-            { number: '500+', label: 'Organizers' },
-          ].map((stat, index) => (
-            <div 
-              key={stat.label} 
-              className="text-center p-4 rounded-lg bg-background/60 backdrop-blur-sm border stat-item"
-              style={{ animationDelay: `${index * 100}ms` }}
-            >
-              <div className="text-2xl font-bold text-foreground">{stat.number}</div>
-              <div className="text-sm text-muted-foreground">{stat.label}</div>
-            </div>
-          ))}
-        </div>
       </div>
 
       <style jsx>{`
@@ -307,14 +289,6 @@ const EventSearch = () => {
 
         .quick-filter-badge {
           animation: fadeInStagger 0.5s ease-out both;
-        }
-
-        .stats-grid {
-          animation: fadeInUp 0.8s ease-out 1.1s both;
-        }
-
-        .stat-item {
-          animation: fadeInStagger 0.6s ease-out both;
         }
       `}</style>
     </section>

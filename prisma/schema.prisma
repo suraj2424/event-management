@@ -27,6 +27,8 @@ model User {
   role            UserRole     @default(ATTENDEE)
   organizedEvents Event[]      @relation("Organizer")
   attendedEvents  Attendance[]
+  tickets         Ticket[]
+  payments        Payment[]
   createdAt       DateTime     @default(now())
   updatedAt       DateTime     @updatedAt
 }
@@ -45,10 +47,13 @@ model Event {
   contactPhone    String
   hostName        String
   hostDescription String
+  price           Float?         // Ticket price (null for free events)
+  currency        String         @default("USD")
   socialLinks     SocialLinks?   @relation("EventSocialLinks", fields: [socialLinksId], references: [id])
   socialLinksId   Int?
   specialGuests   SpecialGuest[] @relation("EventSpecialGuests")
   attendance      Attendance[]   @relation("EventAttendance")
+  tickets         Ticket[]       @relation("EventTickets")
   organizer   User   @relation("Organizer", fields: [organizerId], references: [id], onDelete: Cascade)
   organizerId String
   @@map("events")
@@ -98,4 +103,52 @@ enum AttendanceStatus {
   CONFIRMED
   ATTENDED
   CANCELLED
+}
+
+model Ticket {
+  id              String        @id @default(cuid())
+  ticketNumber    String        @unique
+  qrCode          String?       // QR code for ticket validation
+  userId          String
+  eventId         Int
+  paymentId       String?
+  status          TicketStatus  @default(ACTIVE)
+  purchaseDate    DateTime      @default(now())
+  validatedAt     DateTime?
+  user            User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  event           Event         @relation("EventTickets", fields: [eventId], references: [id], onDelete: Cascade)
+  payment         Payment?      @relation(fields: [paymentId], references: [id])
+  
+  @@map("tickets")
+}
+
+model Payment {
+  id              String        @id @default(cuid())
+  stripeSessionId String        @unique
+  amount          Float
+  currency        String        @default("USD")
+  status          PaymentStatus @default(PENDING)
+  userId          String
+  eventId         Int
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  user            User          @relation(fields: [userId], references: [id])
+  tickets         Ticket[]
+  
+  @@map("payments")
+}
+
+enum TicketStatus {
+  ACTIVE
+  USED
+  CANCELLED
+  REFUNDED
+}
+
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  CANCELLED
+  REFUNDED
 }

@@ -36,6 +36,8 @@ interface Event {
   contactPhone: string;
   hostName: string;
   hostDescription: string;
+  price?: number;
+  currency?: string;
   organizer: { name: string; email: string };
 }
 
@@ -191,6 +193,8 @@ export const getServerSideProps: GetServerSideProps<EventPageProps> = async ({
         contactPhone: true,
         hostName: true,
         hostDescription: true,
+        price: true,
+        currency: true,
         organizer: { select: { name: true, email: true } },
         specialGuests: { select: { id: true, guestName: true, guestDescription: true } },
         socialLinks: { select: { facebook: true, twitter: true, instagram: true } },
@@ -228,6 +232,8 @@ export const getServerSideProps: GetServerSideProps<EventPageProps> = async ({
         name: eventRecord.organizer?.name || '',
         email: eventRecord.organizer?.email || '',
       },
+      ...(eventRecord as any).price != null ? { price: (eventRecord as any).price as number } : {},
+      ...(eventRecord as any).currency ? { currency: (eventRecord as any).currency as string } : {},
     };
 
     const detailsData: EventDetails = {

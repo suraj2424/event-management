@@ -62,6 +62,8 @@ const EventSchema = z.object({
   contactPhone: z.string().optional(),
   hostName: z.string().min(1, "Host name is required"),
   hostDescription: z.string().optional(),
+  price: z.coerce.number().min(0).optional(),
+  currency: z.string().length(3).optional(),
   socialLinks: SocialLinkSchema.optional(),
   specialGuests: SpecialGuestSchema.optional(),
 });
@@ -164,6 +166,9 @@ router.post(async (req, res) => {
         logo: logoUrl || "",
         photos: photoUrls,
         organizer: { connect: { id: validatedData.organizerId } },
+        // Pricing
+        ...(validatedData.price != null ? { price: validatedData.price } : {}),
+        ...(validatedData.currency ? { currency: validatedData.currency } : {}),
         socialLinks,
         specialGuests: validatedData.specialGuests
           ? {
