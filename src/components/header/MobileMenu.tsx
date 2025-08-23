@@ -115,7 +115,7 @@ const MobileMenu: React.FC<MobileMenuProps> = ({
                 style={{ animationDelay: '300ms' }}
                 asChild
               >
-                <Link href="/profile" onClick={onClose}>
+                <Link href="/dashboard" onClick={onClose}>
                   <LayoutGrid className="w-4 h-4 mr-2" />
                   Dashboard
                 </Link>
@@ -127,7 +127,7 @@ const MobileMenu: React.FC<MobileMenuProps> = ({
                 style={{ animationDelay: '350ms' }}
                 asChild
               >
-                <Link href="/profile" onClick={onClose}>
+                <Link href="/dashboard/profile" onClick={onClose}>
                   <User className="w-4 h-4 mr-2" />
                   Profile
                 </Link>
@@ -139,7 +139,7 @@ const MobileMenu: React.FC<MobileMenuProps> = ({
                 style={{ animationDelay: '400ms' }}
                 asChild
               >
-                <Link href="/profile/settings" onClick={onClose}>
+                <Link href="/dashboard/settings" onClick={onClose}>
                   <Settings className="w-4 h-4 mr-2" />
                   Settings
                 </Link>

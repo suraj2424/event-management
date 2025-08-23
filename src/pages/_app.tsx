@@ -9,13 +9,14 @@ function MyApp({
   Component,
   pageProps,
 }: {
-  Component: React.ComponentType;
+  Component: any;
   pageProps: Record<string, unknown>;
 }) {
+  const getLayout = Component.getLayout || ((page: React.ReactNode) => page);
   return (
     <ThemeProvider>
       <ClientProvider>
-        <Component {...pageProps} />
+        {getLayout(<Component {...pageProps} />)}
         <Toaster />
       </ClientProvider>
     </ThemeProvider>

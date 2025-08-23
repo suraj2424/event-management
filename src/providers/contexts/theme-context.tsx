@@ -78,13 +78,9 @@ export function ThemeProvider({
     localStorage.setItem('theme', newTheme)
   }
 
-  if (!mounted) {
-    return <div style={{ visibility: 'hidden' }}>{children}</div>
-  }
-
   return (
     <ThemeContext.Provider value={{ theme, setTheme: handleSetTheme, actualTheme }}>
-      {children}
+      <div style={{ visibility: mounted ? 'visible' : 'hidden' }}>{children}</div>
     </ThemeContext.Provider>
   )
 }

@@ -63,13 +63,13 @@ const UserMenu = () => {
     {
       icon: User,
       label: 'Profile',
-      onClick: () => router.push('/profile'),
+      onClick: () => router.push('/dashboard/profile'),
       shortcut: '⌘P',
     },
     {
       icon: Settings,
       label: 'Settings',
-      onClick: () => router.push('/profile/settings'),
+      onClick: () => router.push('/dashboard/settings'),
       shortcut: '⌘,',
     },
   ];

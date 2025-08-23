@@ -76,7 +76,7 @@ const UserDropdown: React.FC<UserDropdownProps> = ({ session }) => {
         </DropdownMenuItem>
 
         <DropdownMenuItem asChild>
-          <Link href="/profile/settings" className="flex items-center gap-2 cursor-pointer">
+          <Link href="/dashboard/settings" className="flex items-center gap-2 cursor-pointer">
             <Settings className="h-4 w-4" />
             <span>Settings</span>
           </Link>
