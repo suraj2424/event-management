@@ -1,7 +1,8 @@
 // components/parts/EventList.tsx
-import React, { useEffect } from "react";
+import React, { useEffect, useRef } from "react";
 import Image from "next/image";
-import { useRouter } from "next/navigation";
+import { useRouter } from "next/router";
+
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -42,12 +43,16 @@ interface EventListProps {
 const EventList: React.FC<EventListProps> = ({ events }) => {
   const router = useRouter();
 
-  useEffect(() => {
-    // Prefetch event detail pages for better performance
-    events.forEach((event) => {
-      router.prefetch(`/events/${event.id}`);
-    });
-  }, [events, router]);
+  // Track which event pages we've already prefetched to avoid repeats
+  const prefetchedRef = useRef<Set<number>>(new Set());
+
+  const prefetchEvent = (eventId: number) => {
+    // Only prefetch once per event
+    if (prefetchedRef.current.has(eventId)) return;
+    prefetchedRef.current.add(eventId);
+    // Best-effort prefetch; ignore errors
+    router.prefetch(`/events/${eventId}`).catch(() => {});
+  };
 
   const handleCardClick = (eventId: number) => {
     router.push(`/events/${eventId}`);
@@ -122,6 +127,7 @@ const EventList: React.FC<EventListProps> = ({ events }) => {
             className="group overflow-hidden border-0 bg-background hover:shadow-lg transition-all duration-500 cursor-pointer hover:-translate-y-1 event-card"
             style={{ animationDelay: `${index * 100}ms` }}
             onClick={() => handleCardClick(event.id)}
+            onMouseEnter={() => prefetchEvent(event.id)}
           >
             {/* Event Image */}
             <div className="relative h-48 w-full overflow-hidden bg-muted/30">
@@ -216,7 +222,7 @@ const EventList: React.FC<EventListProps> = ({ events }) => {
               <Button 
                 variant="outline"
                 className="w-full group/btn hover:bg-muted transition-all duration-200"
-                onClick={(e) => {
+                onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
                   e.stopPropagation();
                   handleCardClick(event.id);
                 }}

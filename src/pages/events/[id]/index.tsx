@@ -7,6 +7,7 @@ import { AlertTriangle, ArrowLeft, Calendar } from "lucide-react";
 import { Session } from "next-auth";
 import Link from "next/link";
 import EventDetailClient from "@/components/events/id/EventDetailClient";
+import prisma from "@/providers/prismaclient";
 
 interface SocialLinks {
   facebook?: string;
@@ -67,85 +68,6 @@ interface EventPageProps {
   error: string | null;
   isAuthenticated: boolean;
   session: SerializableSession | null;
-}
-
-// Server function to fetch event data
-async function fetchEventData(eventId: string): Promise<Event | null> {
-  const baseUrl =
-    process.env.NEXT_PUBLIC_API_URL ||
-    `http://localhost:${process.env.PORT || 3000}`;
-
-  const response = await fetch(`${baseUrl}/api/events/${eventId}`, {
-    headers: {
-      "Content-Type": "application/json",
-      "Cache-Control": "no-cache",
-    },
-  });
-
-  if (!response.ok) {
-    if (response.status === 404) {
-      return null;
-    }
-    throw new Error(`Event API error: ${response.status}`);
-  }
-
-  return response.json();
-}
-
-// Server function to fetch event details
-async function fetchEventDetails(eventId: string): Promise<EventDetails | null> {
-  const baseUrl =
-    process.env.NEXT_PUBLIC_API_URL ||
-    `http://localhost:${process.env.PORT || 3000}`;
-
-  const response = await fetch(`${baseUrl}/api/events/${eventId}/details`, {
-    headers: {
-      "Content-Type": "application/json",
-      "Cache-Control": "no-cache",
-    },
-  });
-
-  if (!response.ok) {
-    if (response.status === 404) {
-      return null;
-    }
-    throw new Error(`Event details API error: ${response.status}`);
-  }
-
-  return response.json();
-}
-
-// Server function to fetch attendance data
-async function fetchAttendanceData(eventId: string, cookie: string): Promise<Attendance | null> {
-  const baseUrl =
-    process.env.NEXT_PUBLIC_API_URL ||
-    `http://localhost:${process.env.PORT || 3000}`;
-
-  try {
-    const response = await fetch(`${baseUrl}/api/events/${eventId}/attendance`, {
-      headers: {
-        "Content-Type": "application/json",
-        "Cache-Control": "no-cache",
-        Cookie: cookie,
-      },
-    });
-
-    if (response.ok) {
-      const attendance = await response.json();
-      return {
-        isRegistered: attendance.isRegistered,
-        status: attendance.attendance?.status || null,
-      };
-    } else if (response.status === 404) {
-      return { isRegistered: false, status: null };
-    } else {
-      console.error("Failed to fetch attendance status:", response.statusText);
-      return { isRegistered: false, status: null };
-    }
-  } catch (error) {
-    console.error("Error fetching attendance:", error);
-    return { isRegistered: false, status: null };
-  }
 }
 
 // Error State Component
@@ -247,20 +169,84 @@ export const getServerSideProps: GetServerSideProps<EventPageProps> = async ({
     const session: Session | null = await getServerSession(req, res, authOptions);
     const isAuthenticated = !!session;
 
-    // Fetch event and event details using server functions
-    const [eventData, detailsData] = await Promise.all([
-      fetchEventData(eventId),
-      fetchEventDetails(eventId),
-    ]);
-
-    if (!eventData || !detailsData) {
+    const idNum = Number(eventId);
+    if (Number.isNaN(idNum)) {
       return { notFound: true };
     }
 
-    // Fetch attendance data if user is authenticated
+    // Single DB call for event core + details
+    const eventRecord = await prisma.event.findUnique({
+      where: { id: idNum },
+      select: {
+        id: true,
+        title: true,
+        description: true,
+        startDate: true,
+        endDate: true,
+        logo: true,
+        location: true,
+        capacity: true,
+        photos: true,
+        contactEmail: true,
+        contactPhone: true,
+        hostName: true,
+        hostDescription: true,
+        organizer: { select: { name: true, email: true } },
+        specialGuests: { select: { id: true, guestName: true, guestDescription: true } },
+        socialLinks: { select: { facebook: true, twitter: true, instagram: true } },
+      },
+    });
+
+    if (!eventRecord) {
+      return { notFound: true };
+    }
+
+    // Compute status and serialize dates
+    const now = new Date();
+    const start = new Date(eventRecord.startDate as any);
+    const end = new Date(eventRecord.endDate as any);
+    let status: 'UPCOMING' | 'ONGOING' | 'PAST' = 'UPCOMING';
+    if (now > end) status = 'PAST';
+    else if (now >= start && now <= end) status = 'ONGOING';
+
+    const eventData: Event = {
+      id: String(eventRecord.id),
+      title: eventRecord.title,
+      description: eventRecord.description,
+      startDate: start.toISOString(),
+      endDate: end.toISOString(),
+      logo: eventRecord.logo,
+      location: eventRecord.location,
+      capacity: eventRecord.capacity,
+      status,
+      photos: (eventRecord.photos as unknown as string[]) || [],
+      contactEmail: eventRecord.contactEmail,
+      contactPhone: eventRecord.contactPhone,
+      hostName: eventRecord.hostName,
+      hostDescription: eventRecord.hostDescription,
+      organizer: {
+        name: eventRecord.organizer?.name || '',
+        email: eventRecord.organizer?.email || '',
+      },
+    };
+
+    const detailsData: EventDetails = {
+      specialGuests: (eventRecord.specialGuests as any) ?? [],
+      socialLinks: {
+        facebook: eventRecord.socialLinks?.facebook ?? undefined,
+        twitter: eventRecord.socialLinks?.twitter ?? undefined,
+        instagram: eventRecord.socialLinks?.instagram ?? undefined,
+      },
+    };
+
+    // Attendance direct query (authenticated only)
     let attendanceData: Attendance | null = null;
     if (session?.user) {
-      attendanceData = await fetchAttendanceData(eventId, req.headers.cookie || "");
+      const att = await prisma.attendance.findUnique({
+        where: { userId_eventId: { userId: session.user.id, eventId: idNum } },
+        select: { status: true },
+      });
+      attendanceData = { isRegistered: !!att, status: att?.status ?? null };
     }
 
     // Create serializable session object

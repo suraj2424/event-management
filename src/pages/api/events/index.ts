@@ -99,18 +99,27 @@ const errorHandler = (
 // Create router
 const router = createRouter<NextApiRequestWithFiles, NextApiResponse>();
 
-// Apply middlewares
-router.use(
-  uploadMiddleware as unknown as (
-    req: NextApiRequestWithFiles,
-    res: NextApiResponse,
-    next: NextHandler
-  ) => void
-);
+// Helper to run multer only for POST
+const runUploadMiddleware = (
+  req: NextApiRequestWithFiles,
+  res: NextApiResponse
+) =>
+  new Promise<void>((resolve, reject) => {
+    (uploadMiddleware as unknown as (
+      req: NextApiRequestWithFiles,
+      res: NextApiResponse,
+      next: (err?: unknown) => void
+    ) => void)(req, res, (result?: unknown) => {
+      if (result instanceof Error) return reject(result);
+      return resolve();
+    });
+  });
 
 // POST route for event creation
 router.post(async (req, res) => {
   try {
+    // Run file upload middleware only for POST requests
+    await runUploadMiddleware(req, res);
     console.log(req.body); // FormData fields
     // Parse the JSON data from FormData
     const eventData = JSON.parse(req.body.eventData);
@@ -246,9 +255,7 @@ router.get(async (req, res) => {
       where: filter,
       skip,
       take: limit,
-      include: {
-        organizer: true,
-      },
+      // Exclude heavy relations to reduce payload size for list page
       orderBy: {
         startDate: "asc",
       },

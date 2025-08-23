@@ -1,38 +1,26 @@
 // components/parts/Features/EventSearch.tsx
-import React, { useState } from 'react';
-import { Search, MapPin, Calendar, Filter } from 'lucide-react';
+import React, { useEffect, useRef, useState } from 'react';
+import { useRouter } from 'next/router';
+
+import { Search, Filter } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 
 const EventSearch = () => {
+  const router = useRouter();
   const [searchTerm, setSearchTerm] = useState('');
-  const [category, setCategory] = useState('');
-  const [location, setLocation] = useState('');
+  // removed category/location to simplify search UX
 
-  const categories = [
-    { value: 'conferences', label: 'Conferences' },
-    { value: 'workshops', label: 'Workshops' },
-    { value: 'networking', label: 'Networking' },
-    { value: 'seminars', label: 'Seminars' },
-    { value: 'webinars', label: 'Webinars' },
-  ];
+  // Inline suggestions state
+  const [suggestions, setSuggestions] = useState<Array<{ id: number; title: string; startDate?: string; location?: string; logo?: string }>>([]);
+  const [loading, setLoading] = useState(false);
+  const [openSuggestions, setOpenSuggestions] = useState(false);
+  const abortRef = useRef<AbortController | null>(null);
+  const debounceRef = useRef<number | null>(null);
 
-  const locations = [
-    { value: 'newyork', label: 'New York' },
-    { value: 'losangeles', label: 'Los Angeles' },
-    { value: 'chicago', label: 'Chicago' },
-    { value: 'miami', label: 'Miami' },
-    { value: 'remote', label: 'Remote' },
-  ];
+  // removed category/location lists
 
   const quickFilters = [
     'This Weekend',
@@ -44,11 +32,80 @@ const EventSearch = () => {
   ];
 
   const handleSearch = () => {
-    console.log('Searching with:', { searchTerm, category, location });
+    const term = searchTerm.trim();
+    const query = new URLSearchParams();
+    query.set('type', 'all');
+    query.set('page', '1');
+    if (term) query.set('search', term);
+    // Note: category/location are not yet supported by /events SSR filters,
+    // so we only pass `search`. We can extend the SSR later to support them.
+    router.push(`/events?${query.toString()}`);
   };
 
   const handleQuickFilter = (filter: string) => {
-    console.log('Quick filter:', filter);
+    const query = new URLSearchParams();
+    query.set('type', 'all');
+    query.set('page', '1');
+    query.set('search', filter);
+    router.push(`/events?${query.toString()}`);
+  };
+
+  // Debounced suggestions fetcher
+  useEffect(() => {
+    const term = searchTerm.trim();
+
+    // Clear previous debounce
+    if (debounceRef.current) {
+      window.clearTimeout(debounceRef.current);
+    }
+
+    if (!term) {
+      setSuggestions([]);
+      setOpenSuggestions(false);
+      return;
+    }
+
+    debounceRef.current = window.setTimeout(async () => {
+      // Abort previous request
+      if (abortRef.current) abortRef.current.abort();
+      const controller = new AbortController();
+      abortRef.current = controller;
+
+      setLoading(true);
+      try {
+        const params = new URLSearchParams({ search: term, limit: '5', type: 'all', page: '1' });
+        const res = await fetch(`/api/events?${params.toString()}`, { signal: controller.signal });
+        if (!res.ok) throw new Error('Failed');
+        const data = await res.json();
+        const list = Array.isArray(data?.events) ? data.events : [];
+        setSuggestions(
+          list.map((e: any) => ({
+            id: e.id,
+            title: e.title,
+            startDate: e.startDate,
+            location: e.location,
+            logo: e.logo,
+          }))
+        );
+        setOpenSuggestions(true);
+      } catch (err) {
+        if ((err as any)?.name !== 'AbortError') {
+          setSuggestions([]);
+          setOpenSuggestions(false);
+        }
+      } finally {
+        setLoading(false);
+      }
+    }, 300); // 300ms debounce
+
+    return () => {
+      if (debounceRef.current) window.clearTimeout(debounceRef.current);
+    };
+  }, [searchTerm]);
+
+  const handleSelectSuggestion = (id: number) => {
+    setOpenSuggestions(false);
+    router.push(`/events/${id}`);
   };
 
   return (
@@ -75,7 +132,7 @@ const EventSearch = () => {
         {/* Search Container */}
         <Card className="search-card border-0 shadow-lg bg-background/80 backdrop-blur-sm">
           <CardContent className="p-6">
-            <div className="grid gap-4 lg:grid-cols-[1fr,200px,200px,auto]">
+            <div className="grid gap-4 lg:grid-cols-[1fr,auto]">
               {/* Search Input */}
               <div className="relative search-input">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -84,43 +141,48 @@ const EventSearch = () => {
                   placeholder="Search events, keywords, topics..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter') handleSearch(); }}
                   className="pl-10 h-12 bg-muted/30 border-muted focus-visible:ring-1 focus-visible:ring-ring"
                 />
+
+                {/* Suggestions dropdown */}
+                {openSuggestions && (
+                  <div className="absolute z-20 mt-2 w-full rounded-md border bg-popover text-popover-foreground shadow">
+                    {loading && (
+                      <div className="px-4 py-3 text-sm text-muted-foreground">Searching…</div>
+                    )}
+                    {!loading && suggestions.length === 0 && (
+                      <div className="px-4 py-3 text-sm text-muted-foreground">No results</div>
+                    )}
+                    {!loading && suggestions.length > 0 && (
+                      <ul className="max-h-80 overflow-auto">
+                        {suggestions.map((s) => (
+                          <li
+                            key={s.id}
+                            className="px-4 py-3 hover:bg-muted cursor-pointer flex items-center gap-3"
+                            onClick={() => handleSelectSuggestion(s.id)}
+                          >
+                            {s.logo ? (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img src={s.logo} alt="logo" className="w-8 h-8 rounded object-cover" />
+                            ) : (
+                              <div className="w-8 h-8 rounded bg-muted" />
+                            )}
+                            <div className="min-w-0">
+                              <div className="text-sm font-medium truncate">{s.title}</div>
+                              <div className="text-xs text-muted-foreground truncate">
+                                {s.location || 'Location TBA'}
+                              </div>
+                            </div>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                )}
               </div>
 
-              {/* Category Select */}
-              <div className="category-select">
-                <Select value={category} onValueChange={setCategory}>
-                  <SelectTrigger className="h-12 bg-muted/30 border-muted">
-                    <Calendar className="w-4 h-4 mr-2 text-muted-foreground" />
-                    <SelectValue placeholder="Category" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {categories.map((cat) => (
-                      <SelectItem key={cat.value} value={cat.value}>
-                        {cat.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Location Select */}
-              <div className="location-select">
-                <Select value={location} onValueChange={setLocation}>
-                  <SelectTrigger className="h-12 bg-muted/30 border-muted">
-                    <MapPin className="w-4 h-4 mr-2 text-muted-foreground" />
-                    <SelectValue placeholder="Location" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {locations.map((loc) => (
-                      <SelectItem key={loc.value} value={loc.value}>
-                        {loc.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+              
 
               {/* Search Button */}
               <Button 
@@ -231,18 +293,8 @@ const EventSearch = () => {
         }
 
         .search-input,
-        .category-select,
-        .location-select,
         .search-button {
           animation: fadeInUp 0.6s ease-out 0.5s both;
-        }
-
-        .category-select {
-          animation-delay: 0.6s;
-        }
-
-        .location-select {
-          animation-delay: 0.7s;
         }
 
         .search-button {

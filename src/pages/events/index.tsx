@@ -1,6 +1,7 @@
 import { GetServerSideProps } from 'next';
 import EventsClient from '@/components/events/EventsClient';
 import { Event, EventType } from '@/types/events';
+import prismadb from '@/providers/prismaclient';
 
 interface ApiResponse {
   events: Event[];
@@ -33,77 +34,87 @@ export const getServerSideProps: GetServerSideProps<PageProps> = async ({ query 
   let error: string | null = null;
 
   try {
-    // Build query parameters
-    const queryParams = new URLSearchParams({
-      page: page.toString(),
-      limit: limit.toString(),
-      type: eventType,
-    });
+    const currentDate = new Date();
+
+    // Build Prisma filter mirroring API logic
+    let filter:
+      | { AND?: Array<{ startDate?: { lte: Date }; endDate?: { gte: Date } }>; OR?: any[] }
+      | { startDate?: { gt: Date }; OR?: any[] }
+      | { endDate?: { lt: Date }; OR?: any[] }
+      | { OR?: any[] } = {};
+
+    switch (eventType) {
+      case 'upcoming':
+        filter = { startDate: { gt: currentDate } };
+        break;
+      case 'ongoing':
+        filter = { AND: [{ startDate: { lte: currentDate } }, { endDate: { gte: currentDate } }] };
+        break;
+      case 'past':
+        filter = { endDate: { lt: currentDate } };
+        break;
+      // 'all' => no filter
+    }
 
     if (searchTerm) {
-      queryParams.append('search', searchTerm);
-    }
-
-    // Dynamic URL based on environment
-    const getBaseUrl = () => {
-      // Production - use VERCEL_URL or custom domain
-      if (process.env.NEXT_PUBLIC_API_URL) {
-        return `${process.env.NEXT_PUBLIC_API_URL}`;
+      const or = [
+        { title: { contains: searchTerm, mode: 'insensitive' as const } },
+        { description: { contains: searchTerm, mode: 'insensitive' as const } },
+        { location: { contains: searchTerm, mode: 'insensitive' as const } },
+        { hostName: { contains: searchTerm, mode: 'insensitive' as const } },
+      ];
+      if ('AND' in filter || 'startDate' in filter || 'endDate' in filter) {
+        (filter as any).OR = or;
+      } else {
+        filter = { OR: or };
       }
-      
-      // Custom production URL
-      if (process.env.NEXT_PUBLIC_SITE_URL) {
-        return process.env.NEXT_PUBLIC_SITE_URL;
-      }
-      
-      // Development fallback
-      return 'http://localhost:3000';
-    };
-
-    const baseUrl = getBaseUrl();
-
-    const response = await fetch(
-      `${baseUrl}/api/events?${queryParams.toString()}`,
-      { 
-        headers: {
-          'Content-Type': 'application/json',
-          'User-Agent': 'EventsPage/1.0',
-        },
-        signal: AbortSignal.timeout(10000),
-      }
-    );
-
-    if (!response.ok) {
-      const errorText = await response.text().catch(() => 'Unknown error');
-      throw new Error(`HTTP ${response.status}: ${response.statusText}. ${errorText}`);
     }
 
-    const contentType = response.headers.get('content-type');
-    if (!contentType || !contentType.includes('application/json')) {
-      throw new Error('Invalid response format: Expected JSON');
-    }
+    const skip = (page - 1) * limit;
 
-    const data: ApiResponse = await response.json();
+    const prismaEvents = await prismadb.event.findMany({
+      where: filter,
+      skip,
+      take: limit,
+      orderBy: { startDate: 'asc' },
+      select: {
+        id: true,
+        title: true,
+        description: true,
+        startDate: true,
+        endDate: true,
+        location: true,
+        capacity: true,
+        logo: true,
+        photos: true,
+        contactEmail: true,
+        contactPhone: true,
+        hostName: true,
+        hostDescription: true,
+        socialLinksId: true,
+        organizerId: true,
+      },
+    });
 
-    // Validate the response data structure
-    if (!data || typeof data !== 'object') {
-      throw new Error('Invalid response: Response is not an object');
-    }
+    // Add status field to match API response shape consumed by UI
+    const eventsWithStatus = prismaEvents.map((event) => {
+      let status: 'UPCOMING' | 'ONGOING' | 'PAST' = 'UPCOMING';
+      const startDate = new Date(event.startDate);
+      const endDate = new Date(event.endDate);
+      if (currentDate > endDate) status = 'PAST';
+      else if (currentDate >= startDate && currentDate <= endDate) status = 'ONGOING';
+      return {
+        ...event,
+        startDate: startDate.toISOString(),
+        endDate: endDate.toISOString(),
+        status,
+      } as unknown as Event;
+    });
 
-    if (!Array.isArray(data.events)) {
-      console.warn('Invalid events data, using empty array');
-      events = [];
-    } else {
-      events = data.events;
-    }
+    const totalEvents = await prismadb.event.count({ where: filter });
+    totalPages = Math.max(1, Math.ceil(totalEvents / limit));
+    events = eventsWithStatus;
 
-    if (typeof data.totalPages === 'number' && data.totalPages > 0) {
-      totalPages = data.totalPages;
-    } else {
-      totalPages = Math.max(1, Math.ceil(events.length / limit));
-    }
-
-    // Validate that current page doesn't exceed total pages
     if (page > totalPages && totalPages > 0) {
       return {
         redirect: {
@@ -112,24 +123,9 @@ export const getServerSideProps: GetServerSideProps<PageProps> = async ({ query 
         },
       };
     }
-
   } catch (err) {
-    console.error('Error fetching events:', err);
-    
-    // Provide more specific error messages
-    let errorMessage = 'Failed to load events. Please try again later.';
-    
-    if (err instanceof Error) {
-      if (err.name === 'AbortError') {
-        errorMessage = 'Request timed out. Please check your connection and try again.';
-      } else if (err.message.includes('fetch')) {
-        errorMessage = 'Unable to connect to the server. Please try again later.';
-      } else {
-        errorMessage = err.message;
-      }
-    }
-
-    error = errorMessage;
+    console.error('Error fetching events (SSR):', err);
+    error = err instanceof Error ? err.message : 'Failed to load events. Please try again later.';
   }
 
   return {
