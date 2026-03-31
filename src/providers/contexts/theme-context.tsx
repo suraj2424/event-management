@@ -21,16 +21,16 @@ export function ThemeProvider({
 }) {
   const [theme, setTheme] = useState<Theme>('system')
   const [mounted, setMounted] = useState(false)
-
-  const getActualTheme = useCallback((): 'dark' | 'light' => {
-    if (theme === 'system') {
-      return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
-    }
-    return theme
-  }, [theme])
-
   const [actualTheme, setActualTheme] = useState<'dark' | 'light'>('light')
 
+  const getActualTheme = useCallback((currentTheme: Theme): 'dark' | 'light' => {
+    if (currentTheme === 'system') {
+      return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+    }
+    return currentTheme as 'dark' | 'light'
+  }, [])
+
+  // 1. Initial Mount & Load from LocalStorage
   useEffect(() => {
     const savedTheme = localStorage.getItem('theme') as Theme | null
     if (savedTheme) {
@@ -39,37 +39,42 @@ export function ThemeProvider({
     setMounted(true)
   }, [])
 
+  // 2. Apply theme to Document
   useEffect(() => {
     if (!mounted) return
 
-    const updateActualTheme = () => {
-      const newActualTheme = getActualTheme()
-      setActualTheme(newActualTheme)
-      
-      const root = document.documentElement
-      
-      // Disable transitions temporarily if needed
+    const root = document.documentElement
+    
+    const updateTheme = () => {
+      const newActual = getActualTheme(theme)
+      setActualTheme(newActual)
+
+      // Manage transitions
       if (!enableTransitions) {
-        root.style.setProperty('--transition-duration', '0ms')
+        root.classList.add('transition-none')
       }
-      
+
       root.classList.remove('light', 'dark')
-      root.classList.add(newActualTheme)
+      root.classList.add(newActual)
       
-      // Re-enable transitions
+      // Force color-scheme for system UI elements (scrollbars, etc)
+      root.style.colorScheme = newActual
+
       if (!enableTransitions) {
-        setTimeout(() => {
-          root.style.removeProperty('--transition-duration')
-        }, 1)
+        // Force reflow
+        void window.getComputedStyle(root).opacity
+        root.classList.remove('transition-none')
       }
     }
 
-    updateActualTheme()
+    updateTheme()
 
+    // Listen for system changes if in system mode
     if (theme === 'system') {
       const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
-      mediaQuery.addEventListener('change', updateActualTheme)
-      return () => mediaQuery.removeEventListener('change', updateActualTheme)
+      const listener = () => updateTheme()
+      mediaQuery.addEventListener('change', listener)
+      return () => mediaQuery.removeEventListener('change', listener)
     }
   }, [theme, mounted, enableTransitions, getActualTheme])
 
@@ -78,9 +83,12 @@ export function ThemeProvider({
     localStorage.setItem('theme', newTheme)
   }
 
+  // To prevent FOUC without breaking Radix, we return null or a fragment 
+  // only if your app structure allows. Otherwise, just return children.
   return (
     <ThemeContext.Provider value={{ theme, setTheme: handleSetTheme, actualTheme }}>
-      <div style={{ visibility: mounted ? 'visible' : 'hidden' }}>{children}</div>
+      {/* Removed the visibility div wrapper to prevent layout/interaction bugs */}
+      {children}
     </ThemeContext.Provider>
   )
 }

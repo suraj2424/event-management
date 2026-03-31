@@ -80,7 +80,8 @@ const FormItem = React.forwardRef<
 
   return (
     <FormItemContext.Provider value={{ id }}>
-      <div ref={ref} className={cn("space-y-2", className)} {...props} />
+      {/* Increased spacing between form fields for an airy feel */}
+      <div ref={ref} className={cn("space-y-3", className)} {...props} />
     </FormItemContext.Provider>
   )
 })
@@ -95,7 +96,11 @@ const FormLabel = React.forwardRef<
   return (
     <Label
       ref={ref}
-      className={cn(error && "text-destructive", className)}
+      className={cn(
+        "text-sm font-bold tracking-tight ml-1", // Added slight margin for alignment with rounded inputs
+        error && "text-[hsl(var(--destructive))]", 
+        className
+      )}
       htmlFor={formItemId}
       {...props}
     />
@@ -135,7 +140,10 @@ const FormDescription = React.forwardRef<
     <p
       ref={ref}
       id={formDescriptionId}
-      className={cn("text-[0.8rem] text-muted-foreground", className)}
+      className={cn(
+        "text-[13px] font-medium leading-relaxed text-[hsl(var(--muted-foreground)/0.7)] ml-1", 
+        className
+      )}
       {...props}
     />
   )
@@ -157,7 +165,10 @@ const FormMessage = React.forwardRef<
     <p
       ref={ref}
       id={formMessageId}
-      className={cn("text-[0.8rem] font-medium text-destructive", className)}
+      className={cn(
+        "text-[13px] font-bold text-[hsl(var(--destructive))] animate-in fade-in slide-in-from-top-1 duration-300 ml-1", 
+        className
+      )}
       {...props}
     >
       {body}

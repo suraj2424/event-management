@@ -2,14 +2,13 @@ import "../app/globals.css";
 import ClientProvider from "../providers/clientprovider";
 import React from "react";
 import { ThemeProvider } from "@/providers/contexts/theme-context";
-import { ThemeScript } from "@/components/theme-script";
 import { Toaster } from "react-hot-toast";
 
 function MyApp({
   Component,
   pageProps,
 }: {
-  Component: any;
+  Component: React.ComponentType<Record<string, unknown>> & { getLayout?: (page: React.ReactNode) => React.ReactNode };
   pageProps: Record<string, unknown>;
 }) {
   const getLayout = Component.getLayout || ((page: React.ReactNode) => page);

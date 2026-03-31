@@ -13,9 +13,10 @@ import {
   Plus,
   Eye,
   MapPin,
+  AlertCircle
 } from "lucide-react";
 import Link from "next/link";
-import { format } from "date-fns";
+import { format, isValid } from "date-fns";
 import { CustomSession, EventStatus, UserRole } from "../event-form/types/event";
 
 interface DashboardStats {
@@ -48,250 +49,154 @@ export function DashboardOverview() {
   });
   const [recentEvents, setRecentEvents] = useState<RecentEvent[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchDashboardData();
-  }, []);
+    if (session) {
+      fetchDashboardData();
+    }
+  }, [session]);
 
   const fetchDashboardData = async () => {
-    const url = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
+    const baseUrl = process.env.NEXT_PUBLIC_API_URL || "";
     try {
-      const [statsResponse, eventsResponse] = await Promise.all([
-        fetch(`${url}/api/dashboard/stats`),
-        fetch(`${url}/api/dashboard/recent-events`),
+      setError(null);
+      const [statsRes, eventsRes] = await Promise.all([
+        fetch(`${baseUrl}/api/dashboard/stats`),
+        fetch(`${baseUrl}/api/dashboard/recent-events`),
       ]);
 
-      if (statsResponse.ok) {
-        const statsData = await statsResponse.json();
-        setStats(statsData);
-      }
+      if (!statsRes.ok || !eventsRes.ok) throw new Error("Failed to fetch data");
 
-      if (eventsResponse.ok) {
-        const eventsData = await eventsResponse.json();
-        setRecentEvents(eventsData.events);
-      }
-    } catch (error) {
-      console.error("Failed to fetch dashboard data:", error);
+      const statsData = await statsRes.json();
+      const eventsData = await eventsRes.json();
+
+      setStats(statsData);
+      setRecentEvents(eventsData.events || []);
+    } catch (err) {
+      console.error("Dashboard Fetch Error:", err);
+      setError("Could not load dashboard data. Please try again later.");
     } finally {
       setLoading(false);
     }
   };
 
   const getStatusConfig = (status: EventStatus) => {
-    switch (status) {
-      case EventStatus.UPCOMING:
-        return {
-          color: "bg-blue-100 text-blue-800 border-blue-200",
-          icon: Clock,
-        };
-      case EventStatus.ONGOING:
-        return {
-          color: "bg-green-100 text-green-800 border-green-200",
-          icon: Play,
-        };
-      case EventStatus.PAST:
-        return {
-          color: "bg-gray-100 text-gray-800 border-gray-200",
-          icon: Archive,
-        };
-    }
-  };
-
-  const getWelcomeMessage = () => {
-    switch (session?.user.role) {
-      case UserRole.ORGANIZER:
-        return "Welcome back! Here's an overview of your events.";
-      case UserRole.ATTENDEE:
-        return "Welcome back! Here's your event activity.";
-      case UserRole.ADMIN:
-        return "Welcome back! Here's the platform overview.";
-      default:
-        return "Welcome back!";
-    }
+    const configs = {
+      [EventStatus.UPCOMING]: { color: "bg-blue-500/10 text-blue-500 border-blue-500/20", icon: Clock },
+      [EventStatus.ONGOING]: { color: "bg-green-500/10 text-green-500 border-green-500/20", icon: Play },
+      [EventStatus.PAST]: { color: "bg-muted text-muted-foreground border-transparent", icon: Archive },
+    };
+    return configs[status];
   };
 
   const getQuickActions = () => {
-    switch (session?.user.role) {
-      case UserRole.ORGANIZER:
-        return [
-          { label: "Create Event", href: "/dashboard/events/create", icon: Plus },
-          { label: "View All Events", href: "/dashboard/events", icon: Calendar },
-          { label: "Analytics", href: "/dashboard/analytics", icon: TrendingUp },
-        ];
-      case UserRole.ATTENDEE:
-        return [
-          { label: "Browse Events", href: "/events", icon: Calendar },
-          { label: "My Tickets", href: "/dashboard/tickets", icon: Users },
-          { label: "Favorites", href: "/dashboard/favorites", icon: Users },
-        ];
-      case UserRole.ADMIN:
-        return [
-          { label: "Manage Users", href: "/dashboard/users", icon: Users },
-          { label: "All Events", href: "/dashboard/events", icon: Calendar },
-          { label: "System Analytics", href: "/dashboard/analytics", icon: TrendingUp },
-        ];
-      default:
-        return [];
-    }
+    const role = session?.user.role;
+    if (role === UserRole.ORGANIZER) return [
+      { label: "Create Event", href: "/dashboard/events/create", icon: Plus },
+      { label: "View All Events", href: "/dashboard/events", icon: Calendar },
+      { label: "Analytics", href: "/dashboard/analytics", icon: TrendingUp },
+    ];
+    if (role === UserRole.ATTENDEE) return [
+      { label: "Browse Events", href: "/events", icon: Calendar },
+      { label: "My Tickets", href: "/dashboard/tickets", icon: Eye },
+    ];
+    return [];
   };
 
   if (loading) {
     return (
-      <div className="space-y-6">
+      <div className="space-y-8 animate-in fade-in duration-500">
+        <div className="h-10 w-64 bg-muted rounded-md animate-pulse" />
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           {[...Array(4)].map((_, i) => (
-            <Card key={i} className="animate-pulse">
-              <CardContent className="p-6">
-                <div className="h-4 bg-gray-200 rounded w-1/2 mb-2"></div>
-                <div className="h-8 bg-gray-200 rounded w-1/3"></div>
-              </CardContent>
-            </Card>
+            <Card key={i} className="h-24 animate-pulse bg-muted/50" />
           ))}
+        </div>
+        <div className="grid gap-6 lg:grid-cols-3">
+          <Card className="lg:col-span-2 h-64 animate-pulse bg-muted/50" />
+          <Card className="h-64 animate-pulse bg-muted/50" />
         </div>
       </div>
     );
   }
 
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 text-center">
+        <AlertCircle className="h-12 w-12 text-destructive mb-4" />
+        <h3 className="text-lg font-semibold">{error}</h3>
+        <Button onClick={fetchDashboardData} variant="outline" className="mt-4">Try Again</Button>
+      </div>
+    );
+  }
+
   return (
-    <div className="space-y-6">
-      {/* Welcome Section */}
+    <div className="space-y-8">
+      {/* Welcome Header */}
       <div>
         <h1 className="text-3xl font-bold tracking-tight">
-          Welcome back, {session?.user.name}!
+          Welcome back, {session?.user.name?.split(' ')[0]}!
         </h1>
-        <p className="text-muted-foreground">{getWelcomeMessage()}</p>
+        <p className="text-muted-foreground">
+          {session?.user.role === UserRole.ORGANIZER 
+            ? "Manage your events and track performance." 
+            : "Explore events and manage your bookings."}
+        </p>
       </div>
 
-      {/* Stats Cards */}
+      {/* Statistics Section */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center">
-              <Calendar className="h-4 w-4 text-muted-foreground" />
-              <div className="ml-2">
-                <p className="text-sm font-medium text-muted-foreground">
-                  Total Events
-                </p>
-                <p className="text-2xl font-bold">{stats.totalEvents}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center">
-              <Clock className="h-4 w-4 text-blue-600" />
-              <div className="ml-2">
-                <p className="text-sm font-medium text-muted-foreground">
-                  Upcoming
-                </p>
-                <p className="text-2xl font-bold text-blue-600">
-                  {stats.upcomingEvents}
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center">
-              <Play className="h-4 w-4 text-green-600" />
-              <div className="ml-2">
-                <p className="text-sm font-medium text-muted-foreground">
-                  Ongoing
-                </p>
-                <p className="text-2xl font-bold text-green-600">
-                  {stats.ongoingEvents}
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center">
-              <Users className="h-4 w-4 text-purple-600" />
-              <div className="ml-2">
-                <p className="text-sm font-medium text-muted-foreground">
-                  Total Attendees
-                </p>
-                <p className="text-2xl font-bold text-purple-600">
-                  {stats.totalAttendees}
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        <StatCard title="Total Events" value={stats.totalEvents} icon={Calendar} />
+        <StatCard title="Upcoming" value={stats.upcomingEvents} icon={Clock} color="text-blue-500" />
+        <StatCard title="Ongoing" value={stats.ongoingEvents} icon={Play} color="text-green-500" />
+        <StatCard title="Attendees" value={stats.totalAttendees} icon={Users} color="text-purple-500" />
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3">
-        {/* Recent Events */}
+        {/* Recent Events Table/List */}
         <Card className="lg:col-span-2">
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle>Recent Events</CardTitle>
-            <Button variant="outline" size="sm" asChild>
-              <Link href="/dashboard/events">
-                View All
-                <Eye className="ml-2 h-4 w-4" />
-              </Link>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-xl font-bold">Recent Activity</CardTitle>
+            <Button variant="ghost" size="sm" asChild>
+              <Link href="/dashboard/events" className="text-primary">View All</Link>
             </Button>
           </CardHeader>
           <CardContent>
             {recentEvents.length === 0 ? (
-              <div className="text-center py-8">
-                <Calendar className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-                <p className="text-muted-foreground">No events yet</p>
-                {session?.user.role === UserRole.ORGANIZER && (
-                  <Button className="mt-4" asChild>
-                    <Link href="/dashboard/events/create">
-                      <Plus className="mr-2 h-4 w-4" />
-                      Create Your First Event
-                    </Link>
-                  </Button>
-                )}
-              </div>
+              <EmptyState role={session?.user.role as UserRole} />
             ) : (
               <div className="space-y-4">
                 {recentEvents.map((event) => {
-                  const statusConfig = getStatusConfig(event.status);
-                  if (!statusConfig) return null;
-                  const StatusIcon = statusConfig.icon;
-                  
+                  const config = getStatusConfig(event.status);
+                  const eventDate = new Date(event.startDate);
                   return (
-                    <div
-                      key={event.id}
-                      className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors"
-                    >
+                    <div key={event.id} className="flex items-center justify-between p-4 border rounded-xl hover:bg-muted/30 transition-all group">
                       <div className="space-y-1">
-                        <div className="flex items-center gap-2">
-                          <h4 className="font-medium">{event.title}</h4>
-                          <Badge className={`${statusConfig.color} border`}>
-                            <StatusIcon className="mr-1 h-3 w-3" />
-                            {event.status}
+                        <div className="flex items-center gap-3">
+                          <span className="font-semibold group-hover:text-primary transition-colors">{event.title}</span>
+                          <Badge variant="outline" className={config.color}>
+                            <config.icon className="mr-1 h-3 w-3" />
+                            {event.status.toLowerCase()}
                           </Badge>
                         </div>
-                        <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                          <div className="flex items-center gap-1">
+                        <div className="flex flex-wrap gap-y-1 gap-x-4 text-xs text-muted-foreground">
+                          <span className="flex items-center gap-1">
                             <Calendar className="h-3 w-3" />
-                            {format(new Date(event.startDate), "MMM dd, yyyy")}
-                          </div>
-                          <div className="flex items-center gap-1">
+                            {isValid(eventDate) ? format(eventDate, "PPP") : "TBA"}
+                          </span>
+                          <span className="flex items-center gap-1">
                             <MapPin className="h-3 w-3" />
                             {event.location}
-                          </div>
-                          <div className="flex items-center gap-1">
+                          </span>
+                          <span className="flex items-center gap-1">
                             <Users className="h-3 w-3" />
-                            {event.attendeeCount}/{event.capacity}
-                          </div>
+                            {event.attendeeCount} / {event.capacity}
+                          </span>
                         </div>
                       </div>
-                      <Button variant="ghost" size="sm" asChild>
-                        <Link href={`/events/${event.id}`}>
-                          <Eye className="h-4 w-4" />
-                        </Link>
+                      <Button size="icon" variant="ghost" asChild>
+                        <Link href={`/dashboard/events/${event.id}`}><Eye className="h-4 w-4" /></Link>
                       </Button>
                     </div>
                   );
@@ -301,33 +206,64 @@ export function DashboardOverview() {
           </CardContent>
         </Card>
 
-        {/* Quick Actions */}
+        {/* Quick Actions Side Panel */}
         <Card>
           <CardHeader>
-            <CardTitle>Quick Actions</CardTitle>
+            <CardTitle className="text-xl font-bold">Quick Actions</CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              {getQuickActions().map((action) => {
-                const Icon = action.icon;
-                return (
-                  <Button
-                    key={action.href}
-                    variant="outline"
-                    className="w-full justify-start"
-                    asChild
-                  >
-                    <Link href={action.href}>
-                      <Icon className="mr-2 h-4 w-4" />
-                      {action.label}
-                    </Link>
-                  </Button>
-                );
-              })}
-            </div>
+          <CardContent className="grid gap-3">
+            {getQuickActions().map((action) => (
+              <Button key={action.href} variant="outline" className="w-full justify-start h-12 text-sm font-medium" asChild>
+                <Link href={action.href}>
+                  <action.icon className="mr-3 h-4 w-4 text-primary" />
+                  {action.label}
+                </Link>
+              </Button>
+            ))}
           </CardContent>
         </Card>
       </div>
+    </div>
+  );
+}
+
+/* --- Sub-components for cleaner code --- */
+
+interface StatCardProps {
+  title: string;
+  value: string | number;
+  icon: React.ComponentType<{ className?: string }>;
+  color?: string;
+}
+
+function StatCard({ title, value, icon: Icon, color = "text-muted-foreground" }: StatCardProps) {
+  return (
+    <Card>
+      <CardContent className="p-6">
+        <div className="flex items-center gap-4">
+          <div className={`p-2 rounded-lg bg-muted ${color}`}>
+            <Icon className="h-5 w-5" />
+          </div>
+          <div>
+            <p className="text-sm font-medium text-muted-foreground">{title}</p>
+            <p className="text-2xl font-bold">{value}</p>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function EmptyState({ role }: { role: UserRole }) {
+  return (
+    <div className="flex flex-col items-center justify-center py-12 text-center border-2 border-dashed rounded-xl">
+      <Calendar className="h-10 w-10 text-muted-foreground/40 mb-3" />
+      <p className="text-muted-foreground font-medium">No recent events found</p>
+      {role === UserRole.ORGANIZER && (
+        <Button className="mt-4" size="sm" asChild>
+          <Link href="/dashboard/events/create">Create your first event</Link>
+        </Button>
+      )}
     </div>
   );
 }

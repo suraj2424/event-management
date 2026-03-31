@@ -1,4 +1,3 @@
-// components/events/types.ts
 export interface Event {
   id: number;
   title: string;
@@ -35,4 +34,11 @@ export interface EventsClientProps {
   initialPage: number;
   initialEventType: EventType;
   initialSearchTerm?: string;
+}
+
+export interface EventPageProps {
+  event: Event | null;
+  attendance: { isRegistered: boolean; status: string | null } | null;
+  error: string | null;
+  isAuthenticated: boolean;
 }

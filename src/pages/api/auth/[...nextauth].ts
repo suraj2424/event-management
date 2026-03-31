@@ -1,29 +1,28 @@
-import NextAuth from "next-auth";
-import type { NextAuthOptions, Session, User } from "next-auth";
-import type { JWT } from "next-auth/jwt";
+import NextAuth, { NextAuthOptions, DefaultSession } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import prismadb from "@/providers/prismaclient";
 import { comparePassword } from "@/lib/backend/handlePasswords";
-import type { NextApiRequest, NextApiResponse } from "next";
 
-// Custom types for our callbacks
-interface CustomUser extends User {
-  role: "ADMIN" | "ORGANIZER" | "ATTENDEE";
-}
+// --- Module Augmentation ---
+// This allows TS to recognize 'role' and 'id' on the session object everywhere
+declare module "next-auth" {
+  interface Session {
+    user: {
+      id: string;
+      role: "ADMIN" | "ORGANIZER" | "ATTENDEE";
+    } & DefaultSession["user"];
+  }
 
-interface CustomJWT extends JWT {
-  id: string;
-  role: "ADMIN" | "ORGANIZER" | "ATTENDEE";
-}
-
-interface CustomSession extends Session {
-  user: {
-    id: string;
-    name?: string | null;
-    email?: string | null;
-    image?: string | null;
+  interface User {
     role: "ADMIN" | "ORGANIZER" | "ATTENDEE";
-  };
+  }
+}
+
+declare module "next-auth/jwt" {
+  interface JWT {
+    id: string;
+    role: "ADMIN" | "ORGANIZER" | "ATTENDEE";
+  }
 }
 
 export const authOptions: NextAuthOptions = {
@@ -31,108 +30,49 @@ export const authOptions: NextAuthOptions = {
     CredentialsProvider({
       name: "Credentials",
       credentials: {
-        email: { label: "Email", type: "email", placeholder: "johndoe@example.com" },
+        email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
         role: { label: "Role", type: "text" },
       },
-      async authorize(credentials): Promise<CustomUser | null> {
-        if (!credentials?.email || !credentials?.password || !credentials?.role) {
-          throw new Error("Missing credentials");
-        }
+      async authorize(credentials) {
+        if (!credentials?.email || !credentials?.password) return null;
 
         const user = await prismadb.user.findUnique({
           where: { email: credentials.email },
         });
 
-        if (!user) {
-          throw new Error("No user found with the provided email");
+        if (!user || !(await comparePassword(credentials.password, user.password))) {
+          throw new Error("Invalid credentials");
         }
 
-        const isValid = await comparePassword(credentials.password, user.password);
-
-        if (!isValid) {
-          throw new Error("Invalid password");
-        }
-
-        if (user.role !== credentials.role) {
-          throw new Error("Invalid role for this user");
-        }
-
+        // Return the user object with the role from the DB
         return {
-          id: user.id.toString(),
-          name: user.name || null,
+          id: user.id,
+          name: user.name,
           email: user.email,
-          image: null, // Add if you have user images
           role: user.role as "ADMIN" | "ORGANIZER" | "ATTENDEE",
         };
       },
     }),
   ],
-  pages: {
-    signIn: "/auth/signin",
-    error: "/auth/error",
-  },
-  session: {
-    strategy: "jwt",
-    maxAge: 30 * 24 * 60 * 60, // 30 days
-    updateAge: 24 * 60 * 60, // 24 hours
-  },
   callbacks: {
-    async jwt({ 
-      token, 
-      user 
-    }: { 
-      token: JWT; 
-      user?: User | CustomUser;
-    }): Promise<CustomJWT> {
-      // If user is signing in for the first time
+    async jwt({ token, user }) {
       if (user) {
-        const customUser = user as CustomUser;
-        return {
-          ...token,
-          id: customUser.id,
-          role: customUser.role,
-          name: customUser.name,
-          email: customUser.email,
-          picture: customUser.image,
-        };
+        token.id = user.id;
+        token.role = user.role;
       }
-      
-      // Return previous token if the user is already signed in
-      return token as CustomJWT;
+      return token;
     },
-    
-    async session({ 
-      session, 
-      token 
-    }: { 
-      session: Session; 
-      token: JWT | CustomJWT;
-    }): Promise<CustomSession> {
-      const customToken = token as CustomJWT;
-      
-      return {
-        ...session,
-        user: {
-          id: customToken.id,
-          name: customToken.name || null,
-          email: customToken.email || null,
-          image: customToken.picture || null,
-          role: customToken.role,
-        },
-        expires: session.expires,
-      };
+    async session({ session, token }) {
+      if (token && session.user) {
+        session.user.id = token.id;
+        session.user.role = token.role;
+      }
+      return session;
     },
   },
+  pages: { signIn: "/auth/signin" },
+  session: { strategy: "jwt" },
 };
 
-const handler = async (req: NextApiRequest, res: NextApiResponse) => {
-  try {
-    return await NextAuth(req, res, authOptions);
-  } catch (error) {
-    console.error("Authentication error:", error);
-    res.status(500).json({ message: "Internal Server Error" });
-  }
-};
-
-export default handler;
+export default NextAuth(authOptions);

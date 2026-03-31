@@ -1,5 +1,6 @@
 import { NextApiRequest, NextApiResponse } from "next";
 import { createRouter, NextHandler } from "next-connect";
+import { buildEventFilter, getEventStatus } from "@/lib/event-filters";
 import multer from "multer";
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 import { z } from "zod";
@@ -68,20 +69,21 @@ const EventSchema = z.object({
   specialGuests: SpecialGuestSchema.optional(),
 });
 
-// Helper function to upload file to S3
-const uploadToS3 = async (
-  file: Express.Multer.File,
-  eventTitle: string,
-  folder: string
-): Promise<string> => {
+// Improved S3 Helper: Slugify title and add timestamp to prevent collisions
+const uploadToS3 = async (file: Express.Multer.File, eventTitle: string, folder: string): Promise<string> => {
+  const safeTitle = eventTitle.toLowerCase().replace(/[^a-z0-9]/g, "-");
+  const fileName = `${Date.now()}-${file.originalname}`;
+  const key = `events/${safeTitle}/${folder}/${fileName}`;
+
   const command = new PutObjectCommand({
     Bucket: process.env.AWS_S3_BUCKET_NAME!,
-    Key: `${eventTitle}/${folder}/${file.originalname}`,
+    Key: key,
     Body: file.buffer,
     ContentType: file.mimetype,
   });
+
   await s3Client.send(command);
-  return `https://${process.env.AWS_S3_BUCKET_NAME}.s3.amazonaws.com/${eventTitle}/${folder}/${file.originalname}`;
+  return `https://${process.env.AWS_S3_BUCKET_NAME}.s3.amazonaws.com/${key}`;
 };
 
 // Error handler middleware
@@ -199,111 +201,39 @@ router.post(async (req, res) => {
   }
 });
 
+// GET Route refactored
 router.get(async (req, res) => {
   try {
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 9;
-    const skip = (page - 1) * limit;
     const eventType = (req.query.type as string) || "all";
     const search = (req.query.search as string)?.trim() || "";
+    
+    const filter = buildEventFilter(eventType, search);
 
-    const currentDate = new Date();
+    const [events, totalEvents] = await Promise.all([
+      prismadb.event.findMany({
+        where: filter,
+        skip: (page - 1) * limit,
+        take: limit,
+        orderBy: { startDate: "asc" },
+      }),
+      prismadb.event.count({ where: filter })
+    ]);
 
-    // Define filter based on event type
-    let filter:
-      | { AND?: Array<{ startDate?: { lte: Date }; endDate?: { gte: Date } }>; OR?: any[] }
-      | { startDate?: { gt: Date }; OR?: any[] }
-      | { endDate?: { lt: Date }; OR?: any[] }
-      | { OR?: any[] } = {};
-    switch (eventType) {
-      case "upcoming":
-        filter = { startDate: { gt: currentDate } };
-        break;
-      case "ongoing":
-        filter = {
-          AND: [
-            { startDate: { lte: currentDate } },
-            { endDate: { gte: currentDate } },
-          ],
-        };
-        break;
-      case "past":
-        filter = { endDate: { lt: currentDate } };
-        break;
-      // 'all' doesn't need a filter
-    }
-
-    // Apply search filter (title, description, location, hostName)
-    if (search) {
-      const or = [
-        { title: { contains: search, mode: 'insensitive' as const } },
-        { description: { contains: search, mode: 'insensitive' as const } },
-        { location: { contains: search, mode: 'insensitive' as const } },
-        { hostName: { contains: search, mode: 'insensitive' as const } },
-      ];
-      if ('AND' in filter || 'startDate' in filter || 'endDate' in filter) {
-        (filter as any).OR = or;
-      } else {
-        filter = { OR: or };
-      }
-    }
-
-    // const cacheKey = { page, limit, type: eventType };
-    // const cachedResult = await eventRedis.getCachedEventList(cacheKey);
-
-    // if (cachedResult) {
-    //   return res.status(200).json(cachedResult);
-    // }
-
-    // Fetch filtered and paginated events from the database
-    const events = await prismadb.event.findMany({
-      where: filter,
-      skip,
-      take: limit,
-      // Exclude heavy relations to reduce payload size for list page
-      orderBy: {
-        startDate: "asc",
-      },
-    });
-
-    // Add status to each event based on the current date
-    const eventsWithStatus = events.map((event) => {
-      let status = "UPCOMING";
-      const startDate = new Date(event.startDate);
-      const endDate = new Date(event.endDate);
-
-      if (currentDate > endDate) {
-        status = "PAST";
-      } else if (currentDate >= startDate && currentDate <= endDate) {
-        status = "ONGOING";
-      }
-
-      return {
-        ...event,
-        status,
-      };
-    });
-
-    // Get total count of filtered events
-    const totalEvents = await prismadb.event.count({ where: filter });
-
-    // Calculate total pages
-    const totalPages = Math.ceil(totalEvents / limit);
-
-    // await eventRedis.cacheEventList(cacheKey, eventsWithStatus, totalPages, totalEvents);
+    const eventsWithStatus = events.map(event => ({
+      ...event,
+      status: getEventStatus(event.startDate, event.endDate)
+    }));
 
     res.status(200).json({
       events: eventsWithStatus,
       currentPage: page,
-      totalPages,
+      totalPages: Math.ceil(totalEvents / limit),
       totalEvents,
     });
-  } catch (error) {
-    console.error("Error fetching events:", error);
-    res.status(500).json({
-      error: "Error fetching events",
-      details: (error as Error).message,
-    });
+  } catch (error: any) {
+    res.status(500).json({ error: "Error fetching events", details: error.message });
   }
 });
 

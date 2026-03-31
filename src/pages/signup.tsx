@@ -1,10 +1,12 @@
-import React, { useState } from 'react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
-import { useSession } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
-import { Button } from '@/components/ui/button';
+"use client";
+
+import React, { useState } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
+import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
 import {
   Form,
   FormControl,
@@ -12,307 +14,257 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-} from '@/components/ui/form';
-import { Input } from '@/components/ui/input';
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { toast } from "react-hot-toast";
+import Link from "next/link";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
-import { Separator } from '@/components/ui/separator';
-import { Badge } from '@/components/ui/badge';
-import { toast } from 'react-hot-toast';
-import Link from 'next/link';
-import { 
   User,
-  Mail, 
-  Lock, 
-  Calendar, 
-  Loader2, 
-  ArrowRight, 
-  ArrowLeft,
-  UserCheck,
+  Mail,
+  Lock,
+  Calendar,
+  Loader2,
+  ArrowRight,
+  ChevronLeft,
   Crown,
   Ticket,
-  CheckCircle
-} from 'lucide-react';
+  CheckCircle2,
+  Sparkles,
+} from "lucide-react";
 
-const formSchema = z.object({
-  name: z.string().min(2, {
-    message: "Name must be at least 2 characters.",
-  }),
-  email: z.string().email({
-    message: "Please enter a valid email address.",
-  }),
-  password: z.string().min(8, {
-    message: "Password must be at least 8 characters.",
-  }).regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/, {
-    message: "Password must include uppercase, lowercase, number, and special character."
-  }),
-  confirmPassword: z.string().min(8, {
-    message: "Confirm password must be at least 8 characters.",
-  }),
-}).refine((data) => data.password === data.confirmPassword, {
-  message: "Passwords don't match",
-  path: ["confirmPassword"],
-});
+const formSchema = z
+  .object({
+    name: z.string().min(2, "Name is required"),
+    email: z.string().email("Invalid email address"),
+    password: z
+      .string()
+      .min(8, "Password must be at least 8 characters")
+      .regex(/[A-Z]/, "Requires one uppercase letter")
+      .regex(/[a-z]/, "Requires one lowercase letter")
+      .regex(/[0-9]/, "Requires one number")
+      .regex(/[@$!%*?&]/, "Requires one special character"),
+    confirmPassword: z.string(),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: "Passwords do not match",
+    path: ["confirmPassword"],
+  });
 
 type FormValues = z.infer<typeof formSchema>;
-type UserRole = 'ORGANIZER' | 'ATTENDEE';
+type UserRole = "ORGANIZER" | "ATTENDEE";
 
-interface RoleOption {
-  value: UserRole;
-  title: string;
-  description: string;
-  icon: React.ComponentType<{ className?: string }>;
-  features: string[];
-}
-
-const roleOptions: RoleOption[] = [
-  {
-    value: 'ORGANIZER',
-    title: 'Event Organizer',
-    description: 'Create and manage events',
-    icon: Crown,
-    features: [
-      'Create unlimited events',
-      'Manage attendees',
-      'Analytics & insights',
-      'Custom branding'
-    ]
-  },
-  {
-    value: 'ATTENDEE',
-    title: 'Event Attendee',
-    description: 'Discover and join events',
-    icon: Ticket,
-    features: [
-      'Browse events',
-      'RSVP to events',
-      'Get notifications',
-      'Connect with others'
-    ]
-  }
-];
-
-export default function SignUpPage() {
+export default function SignUpRevamp() {
   const router = useRouter();
   const { data: session, status } = useSession();
-  const [currentStep, setCurrentStep] = useState<'role-selection' | 'sign-up'>('role-selection');
+  const [currentStep, setCurrentStep] = useState<"role" | "details">("role");
   const [selectedRole, setSelectedRole] = useState<UserRole | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
-    defaultValues: {
-      name: "",
-      email: "",
-      password: "",
-      confirmPassword: "",
-    },
+    defaultValues: { name: "", email: "", password: "", confirmPassword: "" },
   });
 
-  async function onSubmit(values: FormValues) {
-    if (!selectedRole) {
-      toast.error("Please select a user type first");
-      return;
-    }
-
-    const url = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
-
-    setIsSubmitting(true);
-    try {
-      const response = await fetch(`${url}/api/auth/signup`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: values.name,
-          email: values.email,
-          password: values.password,
-          role: selectedRole
-        }),
-      });
-
-      if (response.ok) {
-        const roleMessage = selectedRole === 'ORGANIZER' ? 'organizer' : 'attendee';
-        toast.success(`Account created successfully as ${roleMessage}!`);
-        router.push("/signin");
-      } else {
-        const data = await response.json();
-        toast.error(data.message || "An error occurred. Please try again.");
-      }
-    } catch (error) {
-      toast.error("An error occurred. Please try again.");
-    } finally {
-      setIsSubmitting(false);
-    }
-  }
-
-  function handleRoleSelect(role: UserRole) {
-    setSelectedRole(role);
-    setCurrentStep('sign-up');
-  }
-
-  function handleBackToRoleSelection() {
-    setCurrentStep('role-selection');
-    form.reset();
-  }
-
-  if (status === "loading") {
+  if (status === "loading")
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="flex flex-col items-center space-y-4">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          <p className="text-muted-foreground">Loading...</p>
-        </div>
+      <div className="h-screen w-full flex items-center justify-center bg-background">
+        <Loader2 className="h-6 w-6 animate-spin text-primary" />
       </div>
     );
-  }
 
   if (session) {
     router.push("/");
     return null;
   }
 
+  const handleRoleSelection = (role: UserRole) => {
+    setSelectedRole(role);
+    setCurrentStep("details");
+  };
+
+  async function onSubmit(values: FormValues) {
+    setIsSubmitting(true);
+    try {
+      const response = await fetch("/api/auth/signup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...values, role: selectedRole }),
+      });
+
+      if (response.ok) {
+        toast.success("Account created! Welcome to the family.");
+        router.push("/signin");
+      } else {
+        const data = await response.json();
+        toast.error(data.message || "Signup failed");
+      }
+    } catch {
+      toast.error("An unexpected error occurred");
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-muted/20 p-4">
-      <div className="w-full max-w-lg space-y-6">
-        {/* Header */}
-        <div className="text-center space-y-4">
-          <div className="mx-auto w-16 h-16 bg-primary rounded-2xl flex items-center justify-center">
-            <Calendar className="h-8 w-8 text-primary-foreground" />
-          </div>
-          <div className="space-y-2">
-            <h1 className="text-3xl font-bold tracking-tight">Evenzia</h1>
-            <p className="text-muted-foreground">
-              Event Management Platform
-            </p>
-          </div>
+    <div className="min-h-screen w-full flex bg-background">
+      {/* --- Left Side: Brand Narrative --- */}
+      <div className="hidden lg:flex lg:w-1/2 relative bg-zinc-950 p-16 flex-col justify-between overflow-hidden">
+        <div className="absolute inset-0">
+          <div className="absolute top-[-10%] right-[-10%] w-[50%] h-[50%] rounded-full bg-primary/10 blur-[120px]" />
+          <div className="absolute bottom-[-10%] left-[-10%] w-[40%] h-[40%] rounded-full bg-blue-500/10 blur-[120px]" />
         </div>
 
-        {/* Role Selection Screen */}
-        {currentStep === 'role-selection' && (
-          <Card className="border-border/50 shadow-lg">
-            <CardHeader className="space-y-2 text-center">
-              <CardTitle className="text-2xl">Choose Your Role</CardTitle>
-              <CardDescription>
-                Select how you'd like to use Evenzia
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {roleOptions.map((option) => {
-                  const IconComponent = option.icon;
-                  return (
-                    <Card
-                      key={option.value}
-                      className="cursor-pointer transition-all hover:shadow-md hover:border-primary/50 border-2 h-full"
-                      onClick={() => handleRoleSelect(option.value)}
-                    >
-                      <CardContent className="p-6 h-full">
-                        <div className="flex flex-col items-center text-center space-y-4 h-full">
-                          <div className="flex-shrink-0">
-                            <div className="w-16 h-16 bg-primary/10 rounded-lg flex items-center justify-center">
-                              <IconComponent className="h-8 w-8 text-primary" />
-                            </div>
-                          </div>
-                          <div className="flex-1 space-y-3">
-                            <div className="space-y-2">
-                              <h3 className="font-semibold text-lg">{option.title}</h3>
-                              <Badge variant="secondary" className="text-xs">
-                                {option.value.toLowerCase()}
-                              </Badge>
-                            </div>
-                            <p className="text-muted-foreground text-sm">
-                              {option.description}
-                            </p>
-                            <ul className="space-y-2">
-                              {option.features.map((feature, index) => (
-                                <li key={index} className="flex items-center justify-center text-xs text-muted-foreground">
-                                  <UserCheck className="h-3 w-3 mr-2 text-primary flex-shrink-0" />
-                                  <span className="text-center">{feature}</span>
-                                </li>
-                              ))}
-                            </ul>
-                          </div>
-                          <ArrowRight className="h-5 w-5 text-muted-foreground mt-auto" />
-                        </div>
-                      </CardContent>
-                    </Card>
-                  );
-                })}
-              </div>
-              
-              <Separator className="my-6" />
-              
-              <div className="text-center">
-                <p className="text-sm text-muted-foreground">
-                  Already have an account?{" "}
-                  <Link
-                    href="/signin"
-                    className="font-medium text-primary hover:underline"
-                  >
-                    Sign in here
-                  </Link>
+        <div className="relative z-10 flex items-center gap-3">
+          <div className="p-2.5 bg-primary rounded-xl">
+            <Calendar className="h-6 w-6 text-white" />
+          </div>
+          <span className="text-2xl font-bold tracking-tighter text-white">
+            Evenzia
+          </span>
+        </div>
+
+        <div className="relative z-10 max-w-md">
+          <Badge
+            variant="outline"
+            className="mb-6 border-primary/30 text-primary bg-primary/5 px-3 py-1"
+          >
+            <Sparkles className="h-3 w-3 mr-2" /> Join the community
+          </Badge>
+          <h2 className="text-6xl font-bold text-white leading-tight">
+            Start your <br />
+            <span className="text-primary underline decoration-primary/30 underline-offset-8">
+              journey
+            </span>{" "}
+            here.
+          </h2>
+          <p className="mt-8 text-zinc-400 text-lg leading-relaxed">
+            Whether you&apos;re curating a global summit or attending your first
+            local workshop, Evenzia provides the tools you need to connect.
+          </p>
+        </div>
+
+        <div className="relative z-10 flex gap-6 text-zinc-500 text-sm font-medium">
+          <Link href="#" className="hover:text-white transition-colors">
+            Documentation
+          </Link>
+          <Link href="#" className="hover:text-white transition-colors">
+            Support
+          </Link>
+          <Link href="#" className="hover:text-white transition-colors">
+            Privacy
+          </Link>
+        </div>
+      </div>
+
+      {/* --- Right Side: Interaction Logic --- */}
+      <div className="flex-1 flex items-center justify-center p-8 bg-zinc-50/50 dark:bg-zinc-900/50">
+        <div className="w-full max-w-md">
+          {/* Step 1: Role Selection */}
+          {currentStep === "role" && (
+            <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-700">
+              <div className="space-y-2 text-center lg:text-left">
+                <h3 className="text-3xl font-bold tracking-tight">
+                  Create account
+                </h3>
+                <p className="text-muted-foreground">
+                  Select your account type to get started.
                 </p>
               </div>
-            </CardContent>
-          </Card>
-        )}
 
-        {/* Sign Up Form */}
-        {currentStep === 'sign-up' && selectedRole && (
-          <Card className="border-border/50 shadow-lg">
-            <CardHeader className="space-y-2">
-              <div className="flex items-center space-x-2">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleBackToRoleSelection}
-                  className="p-1 h-8 w-8"
+              <div className="grid gap-4">
+                <button
+                  onClick={() => handleRoleSelection("ORGANIZER")}
+                  className="group flex items-center p-5 rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-background hover:border-primary hover:ring-4 hover:ring-primary/5 transition-all duration-300"
                 >
-                  <ArrowLeft className="h-4 w-4" />
-                </Button>
-                <div className="flex-1 text-center">
-                  <CardTitle className="text-2xl">Create Account</CardTitle>
-                  <CardDescription className="flex items-center justify-center space-x-2">
-                    <span>Signing up as</span>
-                    <Badge variant="outline" className="text-xs">
-                      {selectedRole === 'ORGANIZER' ? (
-                        <>
-                          <Crown className="h-3 w-3 mr-1" />
-                          Organizer
-                        </>
-                      ) : (
-                        <>
-                          <Ticket className="h-3 w-3 mr-1" />
-                          Attendee
-                        </>
-                      )}
-                    </Badge>
-                  </CardDescription>
-                </div>
+                  <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center group-hover:bg-primary group-hover:text-white transition-colors">
+                    <Crown className="h-6 w-6 text-primary group-hover:text-white" />
+                  </div>
+                  <div className="ml-4 text-left">
+                    <h4 className="font-bold text-base">Organizer</h4>
+                    <p className="text-xs text-muted-foreground">
+                      Host events & manage tickets
+                    </p>
+                  </div>
+                  <ArrowRight className="ml-auto h-4 w-4 text-muted-foreground group-hover:text-primary group-hover:translate-x-1 transition-all" />
+                </button>
+
+                <button
+                  onClick={() => handleRoleSelection("ATTENDEE")}
+                  className="group flex items-center p-5 rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-background hover:border-blue-500 hover:ring-4 hover:ring-blue-500/5 transition-all duration-300"
+                >
+                  <div className="h-12 w-12 rounded-xl bg-blue-500/10 flex items-center justify-center group-hover:bg-blue-500 group-hover:text-white transition-colors">
+                    <Ticket className="h-6 w-6 text-blue-500 group-hover:text-white" />
+                  </div>
+                  <div className="ml-4 text-left">
+                    <h4 className="font-bold text-base">Attendee</h4>
+                    <p className="text-xs text-muted-foreground">
+                      Explore & join experiences
+                    </p>
+                  </div>
+                  <ArrowRight className="ml-auto h-4 w-4 text-muted-foreground group-hover:text-blue-500 group-hover:translate-x-1 transition-all" />
+                </button>
               </div>
-            </CardHeader>
-            <CardContent className="space-y-6">
+
+              <p className="text-center text-sm text-muted-foreground pt-4">
+                Already have an account?{" "}
+                <Link
+                  href="/signin"
+                  className="text-primary font-bold hover:underline underline-offset-4"
+                >
+                  Sign in
+                </Link>
+              </p>
+            </div>
+          )}
+
+          {/* Step 2: Signup Form */}
+          {currentStep === "details" && (
+            <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+              <button
+                onClick={() => setCurrentStep("role")}
+                className="inline-flex items-center text-sm font-medium text-muted-foreground hover:text-primary transition-colors"
+              >
+                <ChevronLeft className="mr-1 h-4 w-4" />
+                Back to roles
+              </button>
+
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <h3 className="text-3xl font-bold tracking-tight">
+                    Create Account
+                  </h3>
+                  <Badge
+                    variant="outline"
+                    className="rounded-full font-medium border-primary/20 text-primary bg-primary/5 capitalize"
+                  >
+                    {selectedRole?.toLowerCase()}
+                  </Badge>
+                </div>
+                <p className="text-muted-foreground">
+                  Complete your profile to get started.
+                </p>
+              </div>
+
               <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                <form
+                  onSubmit={form.handleSubmit(onSubmit)}
+                  className="space-y-4"
+                >
                   <FormField
                     control={form.control}
                     name="name"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-sm font-medium">
+                        <FormLabel className="text-zinc-600 dark:text-zinc-400">
                           Full Name
                         </FormLabel>
                         <FormControl>
-                          <div className="relative">
-                            <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                          <div className="relative group">
+                            <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-400 group-focus-within:text-primary transition-colors" />
                             <Input
-                              placeholder="Enter your full name"
-                              className="pl-10"
+                              placeholder="John Doe"
+                              className="pl-10 h-12 border-zinc-200 dark:border-zinc-800 rounded-xl focus:ring-primary/20"
                               {...field}
                             />
                           </div>
@@ -327,16 +279,15 @@ export default function SignUpPage() {
                     name="email"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-sm font-medium">
-                          Email address
+                        <FormLabel className="text-zinc-600 dark:text-zinc-400">
+                          Email Address
                         </FormLabel>
                         <FormControl>
-                          <div className="relative">
-                            <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                          <div className="relative group">
+                            <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-400 group-focus-within:text-primary transition-colors" />
                             <Input
-                              type="email"
-                              placeholder="Enter your email"
-                              className="pl-10"
+                              placeholder="name@email.com"
+                              className="pl-10 h-12 border-zinc-200 dark:border-zinc-800 rounded-xl focus:ring-primary/20"
                               {...field}
                             />
                           </div>
@@ -345,22 +296,22 @@ export default function SignUpPage() {
                       </FormItem>
                     )}
                   />
-                  
+
                   <FormField
                     control={form.control}
                     name="password"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-sm font-medium">
+                        <FormLabel className="text-zinc-600 dark:text-zinc-400">
                           Password
                         </FormLabel>
                         <FormControl>
-                          <div className="relative">
-                            <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                          <div className="relative group">
+                            <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-400 group-focus-within:text-primary transition-colors" />
                             <Input
                               type="password"
-                              placeholder="Create a strong password"
-                              className="pl-10"
+                              placeholder="••••••••"
+                              className="pl-10 h-12 border-zinc-200 dark:border-zinc-800 rounded-xl focus:ring-primary/20"
                               {...field}
                             />
                           </div>
@@ -375,16 +326,16 @@ export default function SignUpPage() {
                     name="confirmPassword"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-sm font-medium">
+                        <FormLabel className="text-zinc-600 dark:text-zinc-400">
                           Confirm Password
                         </FormLabel>
                         <FormControl>
-                          <div className="relative">
-                            <CheckCircle className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                          <div className="relative group">
+                            <CheckCircle2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-400 group-focus-within:text-primary transition-colors" />
                             <Input
                               type="password"
-                              placeholder="Confirm your password"
-                              className="pl-10"
+                              placeholder="••••••••"
+                              className="pl-10 h-12 border-zinc-200 dark:border-zinc-800 rounded-xl focus:ring-primary/20"
                               {...field}
                             />
                           </div>
@@ -397,55 +348,32 @@ export default function SignUpPage() {
                   <Button
                     type="submit"
                     disabled={isSubmitting}
-                    className="w-full h-11"
-                    size="lg"
+                    className="w-full h-12 rounded-xl text-base font-bold shadow-xl shadow-primary/10 mt-2 transition-transform active:scale-[0.98]"
                   >
                     {isSubmitting ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Creating account...
-                      </>
+                      <Loader2 className="h-5 w-5 animate-spin" />
                     ) : (
                       <>
-                        Create {selectedRole === 'ORGANIZER' ? 'Organizer' : 'Attendee'} Account
-                        <ArrowRight className="ml-2 h-4 w-4" />
+                        Create Account <ArrowRight className="ml-2 h-4 w-4" />
                       </>
                     )}
                   </Button>
                 </form>
               </Form>
 
-              <div className="space-y-4">
-                <Separator />
-                
-                <div className="text-center">
-                  <p className="text-sm text-muted-foreground">
-                    Already have an account?{" "}
-                    <Link
-                      href="/signin"
-                      className="font-medium text-primary hover:underline"
-                    >
-                      Sign in here
-                    </Link>
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Footer */}
-        <div className="text-center">
-          <p className="text-xs text-muted-foreground">
-            By creating an account, you agree to our{" "}
-            <Link href="/terms" className="underline hover:text-foreground">
-              Terms of Service
-            </Link>{" "}
-            and{" "}
-            <Link href="/privacy" className="underline hover:text-foreground">
-              Privacy Policy
-            </Link>
-          </p>
+              <p className="text-center text-xs text-muted-foreground pt-2">
+                By signing up, you agree to our{" "}
+                <Link href="#" className="underline">
+                  Terms
+                </Link>{" "}
+                and{" "}
+                <Link href="#" className="underline">
+                  Privacy
+                </Link>
+                .
+              </p>
+            </div>
+          )}
         </div>
       </div>
     </div>

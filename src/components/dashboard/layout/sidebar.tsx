@@ -1,3 +1,5 @@
+"use client";
+
 import React from "react";
 import Link from "next/link";
 import { useRouter } from "next/router";
@@ -5,18 +7,10 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
+import { Badge } from "@/components/ui/badge";
 import {
-  Calendar,
-  CalendarPlus,
-  Users,
-  Settings,
-  User,
-  BarChart3,
-  Ticket,
-  Heart,
-  Bell,
-  Shield,
-  UserCog,
+  Calendar, CalendarPlus, Users, Settings, User,
+  Ticket, Heart, Shield, UserCog, LayoutDashboard,
 } from "lucide-react";
 import { UserRole } from "@/components/event-form/types/event";
 
@@ -25,184 +19,129 @@ interface SidebarProps {
   onNavigate?: () => void;
 }
 
-const navigationItems = {
+interface NavItem {
+  title: string;
+  href: string;
+  icon: React.ComponentType<{ className?: string }>;
+}
+
+const navConfig = {
   [UserRole.ORGANIZER]: [
-    {
-      title: "Dashboard",
-      href: "/dashboard",
-      icon: BarChart3,
-    },
-    {
-      title: "My Events",
-      href: "/dashboard/events",
-      icon: Calendar,
-    },
-    {
-      title: "Create Event",
-      href: "/dashboard/events/create",
-      icon: CalendarPlus,
-    },
-    {
-      title: "Attendees",
-      href: "/dashboard/attendees",
-      icon: Users,
-    },
-    {
-      title: "Analytics",
-      href: "/dashboard/analytics",
-      icon: BarChart3,
-    },
+    { title: "Overview", href: "/dashboard", icon: LayoutDashboard },
+    { title: "My Events", href: "/dashboard/events", icon: Calendar },
+    { title: "Create Event", href: "/dashboard/events/create", icon: CalendarPlus },
+    { title: "Attendees", href: "/dashboard/attendees", icon: Users },
   ],
   [UserRole.ATTENDEE]: [
-    {
-      title: "Dashboard",
-      href: "/dashboard",
-      icon: BarChart3,
-    },
-    {
-      title: "My Tickets",
-      href: "/dashboard/tickets",
-      icon: Ticket,
-    },
-    {
-      title: "Favorite Events",
-      href: "/dashboard/favorites",
-      icon: Heart,
-    },
-    {
-      title: "Browse Events",
-      href: "/events",
-      icon: Calendar,
-    },
-    {
-      title: "Notifications",
-      href: "/dashboard/notifications",
-      icon: Bell,
-    },
+    { title: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+    { title: "My Tickets", href: "/dashboard/tickets", icon: Ticket },
+    { title: "Favorites", href: "/dashboard/favorites", icon: Heart },
+    { title: "Browse Events", href: "/events", icon: Calendar },
   ],
   [UserRole.ADMIN]: [
-    {
-      title: "Dashboard",
-      href: "/dashboard",
-      icon: BarChart3,
-    },
-    {
-      title: "All Events",
-      href: "/dashboard/events",
-      icon: Calendar,
-    },
-    {
-      title: "Users Management",
-      href: "/dashboard/users",
-      icon: UserCog,
-    },
-    {
-      title: "Analytics",
-      href: "/dashboard/analytics",
-      icon: BarChart3,
-    },
-    {
-      title: "System Settings",
-      href: "/dashboard/settings",
-      icon: Shield,
-    },
+    { title: "Admin Console", href: "/dashboard", icon: Shield },
+    { title: "User Management", href: "/dashboard/users", icon: UserCog },
+    { title: "Platform Events", href: "/dashboard/events", icon: Calendar },
+    { title: "System Health", href: "/dashboard/settings", icon: Settings },
   ],
 };
 
-const commonItems = [
-  {
-    title: "Profile",
-    href: "/dashboard/profile",
-    icon: User,
-  },
-  {
-    title: "Settings",
-    href: "/dashboard/settings",
-    icon: Settings,
-  },
+const commonNav = [
+  { title: "Account Profile", href: "/dashboard/profile", icon: User },
+  { title: "General Settings", href: "/dashboard/settings", icon: Settings },
 ];
 
 export function Sidebar({ userRole, onNavigate }: SidebarProps) {
   const router = useRouter();
-  const roleBasedItems = navigationItems[userRole] || [];
+  const roleItems = navConfig[userRole] || [];
 
-  // Determine a single active href using the longest-matching rule.
-  const allItems = [...roleBasedItems, ...commonItems];
-  const pathname = router.pathname;
-  const activeHref = React.useMemo(() => {
-    const matches = allItems
-      .map((i) => i.href)
-      .filter((href) => {
-        if (href === "/dashboard") return pathname === "/dashboard"; // exact only
-        return pathname === href || pathname.startsWith(href + "/");
-      })
-      .sort((a, b) => b.length - a.length); // longest match wins
-    return matches[0] || "";
-  }, [pathname, allItems]);
+  const isActive = (href: string) => {
+    // Exact match for dashboard home, prefix match for others
+    if (href === "/dashboard") return router.pathname === "/dashboard";
+    return router.pathname.startsWith(href);
+  };
 
-  const isActive = (href: string) => href === activeHref;
+  const NavButton = ({ item }: { item: NavItem }) => {
+    const active = isActive(item.href);
+    
+    return (
+      <Button
+        variant="ghost"
+        className={cn(
+          "w-full gap-3 px-3 py-6 transition-all duration-200 group",
+          active 
+            ? "bg-primary/10 text-primary hover:bg-primary/15 font-semibold" 
+            : "text-muted-foreground hover:text-foreground"
+        )}
+        asChild
+        onClick={onNavigate}
+      >
+        <Link href={item.href}>
+          <item.icon className={cn(
+            "h-5 w-5 shrink-0 transition-colors",
+            active ? "text-primary" : "text-muted-foreground group-hover:text-foreground"
+          )} />
+          {item.title}
+        </Link>
+      </Button>
+    );
+  };
 
   return (
-    <div className="flex h-full flex-col bg-card">
-      {/* Logo/Brand */}
-      <div className="flex h-16 shrink-0 items-center px-6 border-b">
-        <Link href="/dashboard" className="flex items-center space-x-2">
-          <Calendar className="h-8 w-8 text-primary" />
-          <span className="text-xl font-bold">EVENZIA</span>
+    <div className="flex h-full flex-col bg-card border-r shadow-sm">
+      {/* Brand Header */}
+      <div className="flex h-16 items-center px-6 border-b">
+        <Link 
+          href="/dashboard" 
+          className="flex items-center gap-2 hover:opacity-80 transition-opacity"
+          onClick={onNavigate}
+        >
+          <div className="bg-primary p-1 rounded-lg">
+            <Calendar className="h-6 w-6 text-primary-foreground" />
+          </div>
+          <span className="font-black tracking-tight text-xl italic uppercase">
+            Evenzia
+          </span>
         </Link>
       </div>
 
-      <ScrollArea className="flex-1 border-r">
-        <nav className="flex flex-col gap-2 p-4">
-          {/* Role-based navigation */}
-          <div className="space-y-1">
-            {roleBasedItems.map((item) => {
-              const Icon = item.icon;
-              return (
-                <Button
-                  key={item.href}
-                  variant={isActive(item.href) ? "secondary" : "ghost"}
-                  className={cn(
-                    "w-full justify-start"
-                  )}
-                  asChild
-                  onClick={onNavigate}
-                >
-                  <Link href={item.href}>
-                    <Icon className="mr-2 h-4 w-4" />
-                    {item.title}
-                  </Link>
-                </Button>
-              );
-            })}
+      {/* Navigation Area */}
+      <ScrollArea className="flex-1 px-4 py-6">
+        <div className="space-y-6">
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground px-3 mb-3">
+              Main Menu
+            </p>
+            <div className="space-y-1">
+              {roleItems.map((item) => <NavButton key={item.href} item={item} />)}
+            </div>
           </div>
 
-          <Separator className="my-4" />
+          <Separator className="bg-border/50" />
 
-          {/* Common navigation */}
-          <div className="space-y-1">
-            {commonItems.map((item) => {
-              const Icon = item.icon;
-              return (
-                <Button
-                  key={item.href}
-                  variant={isActive(item.href) ? "secondary" : "ghost"}
-                  className={cn(
-                    "w-full justify-start"
-                  )}
-                  asChild
-                  onClick={onNavigate}
-                >
-                  <Link href={item.href}>
-                    <Icon className="mr-2 h-4 w-4" />
-                    {item.title}
-                  </Link>
-                </Button>
-              );
-            })}
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground px-3 mb-3">
+              Personal
+            </p>
+            <div className="space-y-1">
+              {commonNav.map((item) => <NavButton key={item.href} item={item} />)}
+            </div>
           </div>
-        </nav>
+        </div>
       </ScrollArea>
+
+      {/* Footer / Role Indicator */}
+      <div className="p-4 border-t bg-muted/30">
+        <div className="flex items-center gap-3 px-2">
+          <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
+          <div className="flex flex-col">
+            <span className="text-xs font-medium text-muted-foreground">Logged in as</span>
+            <Badge variant="outline" className="mt-1 w-fit capitalize font-bold text-[10px] py-0">
+              {userRole.toLowerCase()}
+            </Badge>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

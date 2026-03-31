@@ -1,11 +1,25 @@
-import React, { useEffect, useState } from "react";
+"use client";
 
+import React, { useEffect, useState, useCallback } from "react";
 import { useSession } from "next-auth/react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+
+interface ProfileData {
+  name?: string;
+  email?: string;
+  role?: string;
+  createdAt?: string;
+  stats?: {
+    eventsCreated?: number;
+    totalAttendees?: number;
+    eventsAttended?: number;
+    upcomingEvents?: number;
+  };
+}
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -13,16 +27,17 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   Form,
   FormControl,
+  FormDescription,
   FormField,
   FormItem,
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { Camera, Save, CheckCircle, AlertCircle } from "lucide-react";
-import { CustomSession, UserRole } from "../event-form/types/event";
+import { Camera, Save, CheckCircle, AlertCircle, Loader2 } from "lucide-react";
+import { CustomSession } from "../event-form/types/event";
 
 const profileSchema = z.object({
-  name: z.string().min(1, "Name is required"),
+  name: z.string().min(2, "Name must be at least 2 characters"),
   email: z.string().email("Invalid email address"),
 });
 
@@ -31,234 +46,154 @@ type ProfileFormValues = z.infer<typeof profileSchema>;
 export function UserProfile() {
   const { data: session, update } = useSession() as {
     data: CustomSession | null;
-    update: any;
+    update: (data?: Partial<CustomSession>) => Promise<CustomSession | null>;
   };
+  
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
-  const [loadingProfile, setLoadingProfile] = useState(true);
-  const [profile, setProfile] = useState<{
-    name: string;
-    email: string;
-    role: UserRole;
-    createdAt?: string;
-    updatedAt?: string;
-    stats?: {
-      eventsCreated: number;
-      totalAttendees: number;
-      eventsAttended: number;
-      upcomingEvents: number;
-    };
-  } | null>(null);
+  const [profile, setProfile] = useState<ProfileData | null>(null);
 
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileSchema),
     defaultValues: {
-      name: session?.user?.name || "",
-      email: session?.user?.email || "",
+      name: "",
+      email: "",
     },
   });
+
+  // Fetch Profile Data
+  const fetchProfile = useCallback(async () => {
+    try {
+      // Use relative path for internal API routes
+      const res = await fetch("/api/user/profile");
+      if (!res.ok) throw new Error("Failed to load profile");
+
+      const data = await res.json();
+      setProfile(data);
+
+      // Only reset if the user hasn't started typing yet
+      if (!form.formState.isDirty) {
+        form.reset({
+          name: data?.name ?? session?.user?.name ?? "",
+          email: data?.email ?? session?.user?.email ?? "",
+        });
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  }, [session?.user, form]);
+
+  useEffect(() => {
+    if (session?.user) {
+      fetchProfile();
+    }
+  }, [fetchProfile, session?.user]);
 
   const onSubmit = async (data: ProfileFormValues) => {
     try {
       setIsSubmitting(true);
       setMessage(null);
 
-      const url = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
-
-      const response = await fetch(`${url}/api/user/profile`, {
+      const response = await fetch("/api/user/profile", {
         method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
       });
 
-      if (!response.ok) {
-        throw new Error("Failed to update profile");
-      }
+      if (!response.ok) throw new Error("Failed to update profile");
 
-      // Update session
+      // Sync the client-side session with the new data
       await update({
         ...session,
         user: {
-          ...session?.user,
+          id: session!.user!.id,
           name: data.name,
           email: data.email,
+          image: session!.user!.image,
+          role: session!.user!.role,
         },
       });
 
-      setMessage({ type: "success", text: "Profile updated successfully!" });
-      // Refresh profile info after update
-      await fetchProfile();
+      setMessage({ type: "success", text: "Changes saved successfully!" });
+      fetchProfile(); // Refresh stats/timestamps
     } catch (error) {
-      setMessage({ type: "error", text: error instanceof Error ? error.message : "Failed to update profile" });
+      setMessage({ 
+        type: "error", 
+        text: error instanceof Error ? error.message : "An unexpected error occurred" 
+      });
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const fetchProfile = async () => {
-    try {
-      setLoadingProfile(true);
-      const url = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
-      const res = await fetch(`${url}/api/user/profile`, { method: "GET" });
-      if (!res.ok) throw new Error("Failed to load profile");
-      const data = await res.json();
-      setProfile(data);
-      // Reset form with fetched values (fallback to session if missing)
-      form.reset({
-        name: data?.name ?? session?.user?.name ?? "",
-        email: data?.email ?? session?.user?.email ?? "",
-      });
-    } catch (e) {
-      // Surface error but don't break the page
-      setMessage({ type: "error", text: e instanceof Error ? e.message : "Failed to load profile" });
-    } finally {
-      setLoadingProfile(false);
-    }
-  };
-
-  useEffect(() => {
-    // Fetch once session is available
-    if (session) {
-      fetchProfile();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [session?.user?.id]);
-
-  const getInitials = (name: string | null | undefined) => {
-    if (!name) return "U";
-    return name
-      .split(" ")
-      .map((n) => n[0])
-      .join("")
-      .toUpperCase()
-      .slice(0, 2);
-  };
-
-  const getRoleConfig = (role: UserRole) => {
-    switch (role) {
-      case UserRole.ADMIN:
-        return {
-          color: "bg-red-100 text-red-800 border-red-200",
-          label: "Administrator",
-        };
-      case UserRole.ORGANIZER:
-        return {
-          color: "bg-blue-100 text-blue-800 border-blue-200",
-          label: "Event Organizer",
-        };
-      case UserRole.ATTENDEE:
-        return {
-          color: "bg-green-100 text-green-800 border-green-200",
-          label: "Attendee",
-        };
-      default:
-        return {
-          color: "bg-gray-100 text-gray-800 border-gray-200",
-          label: "User",
-        };
-    }
+  const getInitials = (name?: string | null) => {
+    return name?.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2) || "U";
   };
 
   if (!session) return null;
 
-  const roleConfig = getRoleConfig(session.user.role);
-
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Profile</h1>
-        <p className="text-muted-foreground">
-          Manage your account settings and preferences
-        </p>
+    <div className="max-w-5xl mx-auto space-y-6">
+      <div className="flex flex-col gap-1">
+        <h1 className="text-3xl font-bold tracking-tight text-foreground">Profile Settings</h1>
+        <p className="text-muted-foreground">Manage your identity and view your activity stats.</p>
       </div>
 
       {message && (
-        <Alert className={message.type === "error" ? "border-red-200 bg-red-50" : "border-green-200 bg-green-50"}>
-          {message.type === "error" ? (
-            <AlertCircle className="h-4 w-4 text-red-600" />
-          ) : (
-            <CheckCircle className="h-4 w-4 text-green-600" />
-          )}
-          <AlertDescription className={message.type === "error" ? "text-red-800" : "text-green-800"}>
-            {message.text}
-          </AlertDescription>
+        <Alert variant={message.type === "error" ? "destructive" : "default"} className={cn(
+            message.type === "success" && "border-green-500 bg-green-500/10 text-green-600"
+        )}>
+          {message.type === "error" ? <AlertCircle className="h-4 w-4" /> : <CheckCircle className="h-4 w-4 text-green-600" />}
+          <AlertDescription>{message.text}</AlertDescription>
         </Alert>
       )}
 
-      <div className="grid gap-6 lg:grid-cols-3">
-        {/* Profile Overview */}
-        <Card className="lg:col-span-1">
-          <CardHeader>
-            <CardTitle>Profile Overview</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="flex flex-col items-center space-y-4">
-              <div className="relative">
-                <Avatar className="h-24 w-24">
-                  <AvatarImage src={session.user.image || ""} alt={session.user.name || ""} />
-                  <AvatarFallback className="text-lg">
-                    {getInitials(session.user.name)}
-                  </AvatarFallback>
-                </Avatar>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="absolute -bottom-2 -right-2 h-8 w-8 rounded-full p-0"
-                >
-                  <Camera className="h-4 w-4" />
-                </Button>
-              </div>
-
-              <div className="text-center space-y-2">
-                <h3 className="text-lg font-semibold">{profile?.name ?? session.user.name}</h3>
-                <p className="text-sm text-muted-foreground">{profile?.email ?? session.user.email}</p>
-                <Badge className={`${roleConfig.color} border`}>
-                  {roleConfig.label}
-                </Badge>
-              </div>
+      <div className="grid gap-6 md:grid-cols-12">
+        {/* Left Col: Overview */}
+        <Card className="md:col-span-4 h-fit">
+          <CardContent className="pt-8 flex flex-col items-center">
+            <div className="relative group">
+              <Avatar className="h-28 w-28 border-4 border-background shadow-xl">
+                <AvatarImage src={session.user.image || ""} />
+                <AvatarFallback className="bg-primary/10 text-primary text-2xl font-bold">
+                  {getInitials(profile?.name || session.user.name)}
+                </AvatarFallback>
+              </Avatar>
+              <Button size="icon" variant="secondary" className="absolute bottom-0 right-0 rounded-full shadow-md border h-9 w-9">
+                <Camera className="h-4 w-4" />
+              </Button>
             </div>
 
-            <div className="space-y-3 text-sm">
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Member since</span>
-                <span>{profile?.createdAt ? new Date(profile.createdAt).toLocaleDateString() : "-"}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Last activity</span>
-                <span>{profile?.updatedAt ? new Date(profile.updatedAt).toLocaleDateString() : "-"}</span>
-              </div>
-              {session.user.role === UserRole.ORGANIZER && (
-                <>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Events created</span>
-                    <span>{loadingProfile ? "-" : profile?.stats?.eventsCreated ?? 0}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Total attendees</span>
-                    <span>{loadingProfile ? "-" : profile?.stats?.totalAttendees ?? 0}</span>
-                  </div>
-                </>
-              )}
-              {session.user.role === UserRole.ATTENDEE && (
-                <>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Events attended</span>
-                    <span>{loadingProfile ? "-" : profile?.stats?.eventsAttended ?? 0}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Upcoming events</span>
-                    <span>{loadingProfile ? "-" : profile?.stats?.upcomingEvents ?? 0}</span>
-                  </div>
-                </>
-              )}
+            <div className="mt-4 text-center space-y-1">
+              <h3 className="text-xl font-bold">{profile?.name || session.user.name}</h3>
+              <Badge variant="outline" className="capitalize px-3 py-0.5">
+                {profile?.role?.toLowerCase() || session.user.role.toLowerCase()}
+              </Badge>
+            </div>
+
+            <div className="w-full mt-8 space-y-4 pt-6 border-t">
+               <StatItem label="Joined" value={profile?.createdAt ? new Date(profile.createdAt).toLocaleDateString() : 'Recent'} />
+               {profile?.stats && (
+                 <>
+                   {session.user.role === 'ORGANIZER' ? (
+                     <>
+                        <StatItem label="Events Hosted" value={profile.stats.eventsCreated ?? 0} />
+                        <StatItem label="Total Reach" value={profile.stats.totalAttendees ?? 0} />
+                     </>
+                   ) : (
+                     <>
+                        <StatItem label="Attended" value={profile.stats.eventsAttended ?? 0} />
+                        <StatItem label="Upcoming" value={profile.stats.upcomingEvents ?? 0} />
+                     </>
+                   )}
+                 </>
+               )}
             </div>
           </CardContent>
         </Card>
 
-        {/* Profile Form */}
-        <Card className="lg:col-span-2">
+        {/* Right Col: Edit Form */}
+        <Card className="md:col-span-8">
           <CardHeader>
             <CardTitle>Personal Information</CardTitle>
           </CardHeader>
@@ -271,9 +206,9 @@ export function UserProfile() {
                     name="name"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Full Name</FormLabel>
+                        <FormLabel>Display Name</FormLabel>
                         <FormControl>
-                          <Input placeholder="Enter your full name" {...field} />
+                          <Input placeholder="John Doe" {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -286,31 +221,23 @@ export function UserProfile() {
                       <FormItem>
                         <FormLabel>Email Address</FormLabel>
                         <FormControl>
-                          <Input 
-                            type="email" 
-                            placeholder="Enter your email" 
-                            {...field} 
-                          />
+                          <Input type="email" readOnly className="bg-muted" {...field} />
                         </FormControl>
+                        <FormDescription>Contact support to change your email.</FormDescription>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
                 </div>
 
-                <div className="flex justify-end">
-                  <Button type="submit" disabled={isSubmitting}>
+                <div className="flex justify-end pt-4">
+                  <Button type="submit" disabled={isSubmitting || !form.formState.isDirty} className="min-w-[140px]">
                     {isSubmitting ? (
-                      <>
-                        <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-background border-t-transparent" />
-                        Saving...
-                      </>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     ) : (
-                      <>
-                        <Save className="mr-2 h-4 w-4" />
-                        Save Changes
-                      </>
+                      <Save className="mr-2 h-4 w-4" />
                     )}
+                    Save Changes
                   </Button>
                 </div>
               </form>
@@ -320,4 +247,17 @@ export function UserProfile() {
       </div>
     </div>
   );
+}
+
+function StatItem({ label, value }: { label: string; value: string | number }) {
+  return (
+    <div className="flex justify-between items-center text-sm">
+      <span className="text-muted-foreground">{label}</span>
+      <span className="font-semibold">{value}</span>
+    </div>
+  );
+}
+
+function cn(...inputs: (string | undefined | null | false | 0)[]) {
+    return inputs.filter(Boolean).join(" ");
 }

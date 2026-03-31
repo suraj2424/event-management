@@ -1,76 +1,88 @@
 import { GetServerSideProps } from "next";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/pages/api/auth/[...nextauth]";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { AlertTriangle, ArrowLeft, Calendar } from "lucide-react";
-import { Session } from "next-auth";
+import { AlertTriangle, Calendar, ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import EventDetailClient from "@/components/events/id/EventDetailClient";
 import prisma from "@/providers/prismaclient";
+import { getEventStatus } from "@/lib/event-filters";
+import { EventPageProps } from "@/types/events";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 
-interface SocialLinks {
-  facebook?: string;
-  twitter?: string;
-  instagram?: string;
+export default function EventDetailPage({
+  event,
+  attendance,
+  error,
+  isAuthenticated,
+}: EventPageProps) {
+  if (error) return <ErrorState error={error} />;
+  if (!event) return <NotFoundState />;
+
+  return (
+    <EventDetailClient
+      event={event}
+      attendance={attendance}
+      isAuthenticated={isAuthenticated}
+    />
+  );
 }
 
-interface SpecialGuest {
-  id: number;
-  guestName: string;
-  guestDescription: string;
-}
+export const getServerSideProps: GetServerSideProps<EventPageProps> = async ({ params, req, res }) => {
+  const eventId = params?.id as string;
+  const idNum = parseInt(eventId);
 
-interface Event {
-  id: string;
-  title: string;
-  description: string;
-  startDate: string;
-  endDate: string;
-  logo: string;
-  location: string;
-  capacity: number;
-  status: string;
-  photos: string[];
-  contactEmail: string;
-  contactPhone: string;
-  hostName: string;
-  hostDescription: string;
-  price?: number;
-  currency?: string;
-  organizer: { name: string; email: string };
-}
+  if (isNaN(idNum)) return { notFound: true };
 
-interface EventDetails {
-  specialGuests: SpecialGuest[];
-  socialLinks: SocialLinks;
-}
+  try {
+    const session = await getServerSession(req, res, authOptions);
+    
+    const eventRecord = await prisma.event.findUnique({
+      where: { id: idNum },
+      include: {
+        // Removed 'image' as it doesn't exist in your User model
+        organizer: { select: { id: true, name: true, email: true } },
+        specialGuests: { select: { id: true, guestName: true, guestDescription: true } },
+        socialLinks: { select: { facebook: true, twitter: true, instagram: true } },
+      },
+    });
 
-interface Attendance {
-  status: string | null;
-  isRegistered: boolean;
-}
+    if (!eventRecord) return { notFound: true };
 
-interface SerializableSession {
-  user: {
-    id: string;
-    name: string | null;
-    email: string | null;
-    image: string | null;
-    role: "ADMIN" | "ORGANIZER" | "ATTENDEE";
-  };
-  expires: string;
-}
+    let attendanceData = null;
+    if (session?.user) {
+      const att = await prisma.attendance.findUnique({
+        where: { userId_eventId: { userId: session.user.id, eventId: idNum } },
+        select: { status: true },
+      });
+      attendanceData = { isRegistered: !!att, status: att?.status ?? null };
+    }
 
-interface EventPageProps {
-  event: Event | null;
-  eventDetails: EventDetails | null;
-  attendance: Attendance | null;
-  eventId: string;
-  error: string | null;
-  isAuthenticated: boolean;
-  session: SerializableSession | null;
-}
+    // Clean serialization for Next.js
+    const eventData = {
+      ...eventRecord,
+      id: String(eventRecord.id),
+      startDate: eventRecord.startDate.toISOString(),
+      endDate: eventRecord.endDate.toISOString(),
+      // Use your helper for the status string
+      status: getEventStatus(eventRecord.startDate, eventRecord.endDate),
+      price: eventRecord.price || 0,
+    };
+
+    return {
+      props: {
+        event: eventData as any,
+        attendance: attendanceData,
+        eventId,
+        error: null,
+        isAuthenticated: !!session,
+      },
+    };
+  } catch (err: any) {
+    return { props: { event: null, attendance: null, eventId, error: err.message, isAuthenticated: false }};
+  }
+};
+
 
 // Error State Component
 const ErrorState: React.FC<{ error: string }> = ({ error }) => (
@@ -125,175 +137,3 @@ const NotFoundState: React.FC = () => (
     </Card>
   </div>
 );
-
-export default function EventDetailPage({
-  event,
-  eventDetails,
-  attendance,
-  eventId,
-  error,
-  isAuthenticated,
-}: EventPageProps) {
-  if (error) {
-    return <ErrorState error={error} />;
-  }
-
-  if (!event || !eventDetails) {
-    return <NotFoundState />;
-  }
-
-  return (
-    <EventDetailClient
-      event={event}
-      eventDetails={eventDetails}
-      attendance={attendance}
-      eventId={eventId}
-      isAuthenticated={isAuthenticated}
-    />
-  );
-}
-
-export const getServerSideProps: GetServerSideProps<EventPageProps> = async ({
-  params,
-  req,
-  res,
-}) => {
-  const eventId = params?.id as string;
-
-  if (!eventId) {
-    return {
-      notFound: true,
-    };
-  }
-
-  try {
-    // Get user session
-    const session: Session | null = await getServerSession(req, res, authOptions);
-    const isAuthenticated = !!session;
-
-    const idNum = Number(eventId);
-    if (Number.isNaN(idNum)) {
-      return { notFound: true };
-    }
-
-    // Single DB call for event core + details
-    const eventRecord = await prisma.event.findUnique({
-      where: { id: idNum },
-      select: {
-        id: true,
-        title: true,
-        description: true,
-        startDate: true,
-        endDate: true,
-        logo: true,
-        location: true,
-        capacity: true,
-        photos: true,
-        contactEmail: true,
-        contactPhone: true,
-        hostName: true,
-        hostDescription: true,
-        price: true,
-        currency: true,
-        organizer: { select: { name: true, email: true } },
-        specialGuests: { select: { id: true, guestName: true, guestDescription: true } },
-        socialLinks: { select: { facebook: true, twitter: true, instagram: true } },
-      },
-    });
-
-    if (!eventRecord) {
-      return { notFound: true };
-    }
-
-    // Compute status and serialize dates
-    const now = new Date();
-    const start = new Date(eventRecord.startDate as any);
-    const end = new Date(eventRecord.endDate as any);
-    let status: 'UPCOMING' | 'ONGOING' | 'PAST' = 'UPCOMING';
-    if (now > end) status = 'PAST';
-    else if (now >= start && now <= end) status = 'ONGOING';
-
-    const eventData: Event = {
-      id: String(eventRecord.id),
-      title: eventRecord.title,
-      description: eventRecord.description,
-      startDate: start.toISOString(),
-      endDate: end.toISOString(),
-      logo: eventRecord.logo,
-      location: eventRecord.location,
-      capacity: eventRecord.capacity,
-      status,
-      photos: (eventRecord.photos as unknown as string[]) || [],
-      contactEmail: eventRecord.contactEmail,
-      contactPhone: eventRecord.contactPhone,
-      hostName: eventRecord.hostName,
-      hostDescription: eventRecord.hostDescription,
-      organizer: {
-        name: eventRecord.organizer?.name || '',
-        email: eventRecord.organizer?.email || '',
-      },
-      ...(eventRecord as any).price != null ? { price: (eventRecord as any).price as number } : {},
-      ...(eventRecord as any).currency ? { currency: (eventRecord as any).currency as string } : {},
-    };
-
-    const detailsData: EventDetails = {
-      specialGuests: (eventRecord.specialGuests as any) ?? [],
-      socialLinks: {
-        facebook: eventRecord.socialLinks?.facebook ?? undefined,
-        twitter: eventRecord.socialLinks?.twitter ?? undefined,
-        instagram: eventRecord.socialLinks?.instagram ?? undefined,
-      },
-    };
-
-    // Attendance direct query (authenticated only)
-    let attendanceData: Attendance | null = null;
-    if (session?.user) {
-      const att = await prisma.attendance.findUnique({
-        where: { userId_eventId: { userId: session.user.id, eventId: idNum } },
-        select: { status: true },
-      });
-      attendanceData = { isRegistered: !!att, status: att?.status ?? null };
-    }
-
-    // Create serializable session object
-    const serializableSession: SerializableSession | null = session
-      ? {
-          user: {
-            id: session.user.id,
-            name: session.user.name || null,
-            email: session.user.email || null,
-            image: session.user.image || null,
-            role: session.user.role,
-          },
-          expires: session.expires,
-        }
-      : null;
-
-    return {
-      props: {
-        event: eventData,
-        eventDetails: detailsData,
-        attendance: attendanceData,
-        eventId,
-        error: null,
-        isAuthenticated,
-        session: serializableSession,
-      },
-    };
-  } catch (error) {
-    console.error("Error fetching event data:", error);
-
-    return {
-      props: {
-        event: null,
-        eventDetails: null,
-        attendance: null,
-        eventId,
-        error:
-          error instanceof Error ? error.message : "Failed to load event data",
-        isAuthenticated: false,
-        session: null,
-      },
-    };
-  }
-};

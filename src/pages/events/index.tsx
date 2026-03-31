@@ -2,13 +2,7 @@ import { GetServerSideProps } from 'next';
 import EventsClient from '@/components/events/EventsClient';
 import { Event, EventType } from '@/types/events';
 import prismadb from '@/providers/prismaclient';
-
-interface ApiResponse {
-  events: Event[];
-  currentPage: number;
-  totalPages: number;
-  totalEvents: number;
-}
+import { buildEventFilter, getEventStatus } from '@/lib/event-filters';
 
 interface PageProps {
   events: Event[];
@@ -20,142 +14,57 @@ interface PageProps {
 }
 
 export const getServerSideProps: GetServerSideProps<PageProps> = async ({ query }) => {
-  // Parse query parameters with proper defaults and validation
   const page = Math.max(1, parseInt(query.page as string || '1'));
   const eventType = (['all', 'upcoming', 'ongoing', 'past'].includes(query.type as string)) 
     ? (query.type as EventType) 
     : 'all';
   const limit = Math.min(50, Math.max(1, parseInt(query.limit as string || '9')));
-
   const searchTerm = (query.search as string || '').trim();
-
-  let events: Event[] = [];
-  let totalPages = 1;
-  let error: string | null = null;
+  const skip = (page - 1) * limit;
 
   try {
-    const currentDate = new Date();
+    const filter = buildEventFilter(eventType, searchTerm);
 
-    // Build Prisma filter mirroring API logic
-    let filter:
-      | { AND?: Array<{ startDate?: { lte: Date }; endDate?: { gte: Date } }>; OR?: any[] }
-      | { startDate?: { gt: Date }; OR?: any[] }
-      | { endDate?: { lt: Date }; OR?: any[] }
-      | { OR?: any[] } = {};
+    const [prismaEvents, totalEvents] = await Promise.all([
+      prismadb.event.findMany({
+        where: filter,
+        skip,
+        take: limit,
+        orderBy: { startDate: 'asc' },
+      }),
+      prismadb.event.count({ where: filter })
+    ]);
 
-    switch (eventType) {
-      case 'upcoming':
-        filter = { startDate: { gt: currentDate } };
-        break;
-      case 'ongoing':
-        filter = { AND: [{ startDate: { lte: currentDate } }, { endDate: { gte: currentDate } }] };
-        break;
-      case 'past':
-        filter = { endDate: { lt: currentDate } };
-        break;
-      // 'all' => no filter
+    const totalPages = Math.max(1, Math.ceil(totalEvents / limit));
+
+    // Fix: Date serialization for Next.js SSR
+    const events = prismaEvents.map((event) => ({
+      ...event,
+      startDate: event.startDate.toISOString(),
+      endDate: event.endDate.toISOString(),
+      status: getEventStatus(event.startDate, event.endDate),
+    })) as unknown as Event[];
+
+    if (page > totalPages && totalEvents > 0) {
+      return { redirect: { 
+        destination: `/events?type=${eventType}&page=${totalPages}${searchTerm ? `&search=${encodeURIComponent(searchTerm)}` : ''}`, 
+        permanent: false 
+      }};
     }
 
-    if (searchTerm) {
-      const or = [
-        { title: { contains: searchTerm, mode: 'insensitive' as const } },
-        { description: { contains: searchTerm, mode: 'insensitive' as const } },
-        { location: { contains: searchTerm, mode: 'insensitive' as const } },
-        { hostName: { contains: searchTerm, mode: 'insensitive' as const } },
-      ];
-      if ('AND' in filter || 'startDate' in filter || 'endDate' in filter) {
-        (filter as any).OR = or;
-      } else {
-        filter = { OR: or };
-      }
-    }
-
-    const skip = (page - 1) * limit;
-
-    const prismaEvents = await prismadb.event.findMany({
-      where: filter,
-      skip,
-      take: limit,
-      orderBy: { startDate: 'asc' },
-      select: {
-        id: true,
-        title: true,
-        description: true,
-        startDate: true,
-        endDate: true,
-        location: true,
-        capacity: true,
-        logo: true,
-        photos: true,
-        contactEmail: true,
-        contactPhone: true,
-        hostName: true,
-        hostDescription: true,
-        socialLinksId: true,
-        organizerId: true,
-      },
-    });
-
-    // Add status field to match API response shape consumed by UI
-    const eventsWithStatus = prismaEvents.map((event) => {
-      let status: 'UPCOMING' | 'ONGOING' | 'PAST' = 'UPCOMING';
-      const startDate = new Date(event.startDate);
-      const endDate = new Date(event.endDate);
-      if (currentDate > endDate) status = 'PAST';
-      else if (currentDate >= startDate && currentDate <= endDate) status = 'ONGOING';
-      return {
-        ...event,
-        startDate: startDate.toISOString(),
-        endDate: endDate.toISOString(),
-        status,
-      } as unknown as Event;
-    });
-
-    const totalEvents = await prismadb.event.count({ where: filter });
-    totalPages = Math.max(1, Math.ceil(totalEvents / limit));
-    events = eventsWithStatus;
-
-    if (page > totalPages && totalPages > 0) {
-      return {
-        redirect: {
-          destination: `/events?type=${eventType}&page=${totalPages}${searchTerm ? `&search=${encodeURIComponent(searchTerm)}` : ''}`,
-          permanent: false,
-        },
-      };
-    }
+    return { props: { events, totalPages, error: null, page, eventType, searchTerm }};
   } catch (err) {
-    console.error('Error fetching events (SSR):', err);
-    error = err instanceof Error ? err.message : 'Failed to load events. Please try again later.';
+    return { props: { events: [], totalPages: 1, error: "Failed to load events", page, eventType, searchTerm }};
   }
-
-  return {
-    props: {
-      events,
-      totalPages,
-      error,
-      page,
-      eventType,
-      searchTerm,
-    },
-  };
 };
 
-export default function EventsPage({ 
-  events, 
-  totalPages, 
-  error, 
-  page, 
-  eventType, 
-  searchTerm 
-}: PageProps) {
-  return (
-    <EventsClient 
-      initialEvents={events} 
-      initialTotalPages={totalPages} 
-      initialError={error}
-      initialPage={page}
-      initialEventType={eventType}
-      initialSearchTerm={searchTerm}
-    />
-  );
+export default function EventsPage(props: PageProps) {
+  return <EventsClient 
+    initialEvents={props.events} 
+    initialTotalPages={props.totalPages} 
+    initialError={props.error}
+    initialPage={props.page}
+    initialEventType={props.eventType}
+    initialSearchTerm={props.searchTerm}
+  />;
 }
